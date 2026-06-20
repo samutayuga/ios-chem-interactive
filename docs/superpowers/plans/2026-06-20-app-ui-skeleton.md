@@ -767,7 +767,7 @@ git commit -m "feat: add observable CanvasModel and drag token payload"
   - `enum Theme` with static `Color` constants: `bg, cation, anion, accent, surface, muted, text`.
   - `func categoryColor(_:) -> Color`, `func elementClassColor(_:) -> Color`, `func orbitalColor(_ subshell: Character) -> Color`.
   - `enum BondHintKind { case ionic, covalent, metallic, none }` with `var tint: Color?`.
-  - `func bondHint(firstClass: ElementClass, firstIsPolyatomic: Bool, tokenClass: ElementClass, tokenCategory: Category) -> BondHintKind`.
+  - `func bondHint(firstClass: ElementClass, firstIsPolyatomic: Bool, tokenClass: ElementClass, tokenCategory: ChemCore.Category) -> BondHintKind`.
 
 - [ ] **Step 1: Write the failing test `ChemInteractiveTests/ThemeTests.swift`**
 
@@ -855,7 +855,7 @@ enum Theme {
 }
 
 /// Wikipedia-style category palette, calibrated for the dark bg (from elementColor.ts).
-func categoryColor(_ category: Category) -> Color {
+func categoryColor(_ category: ChemCore.Category) -> Color {
     switch category {
     case .alkaliMetal:         return Color(hex: 0xff8080)
     case .alkalineEarthMetal:  return Color(hex: 0xffd280)
@@ -906,7 +906,7 @@ enum BondHintKind {
 /// Prospective bond type of `token` against the already-placed `first` element.
 /// Ported from ElementTray.tsx `bondHint`.
 func bondHint(firstClass: ElementClass, firstIsPolyatomic: Bool,
-              tokenClass: ElementClass, tokenCategory: Category) -> BondHintKind {
+              tokenClass: ElementClass, tokenCategory: ChemCore.Category) -> BondHintKind {
     if tokenCategory == .nobleGas { return .none }
     if firstIsPolyatomic { return .ionic }
     if firstClass == .metal && tokenClass == .metal { return .metallic }
