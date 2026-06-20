@@ -14,7 +14,7 @@
 - **`SWIFT_VERSION = 5.0`** (Swift 5 language mode) for both app and test targets, to avoid Swift 6 strict-concurrency friction in views. `ChemCore`'s public value types are already `Sendable`.
 - **No chemistry logic in the app.** All domain/state transitions go through `ChemCore` (`canvasReducer`, `bondingType`, `calcStoich`, `metallicElectronCount`, `iupacFirst`, `gcd`, `ZoneState(element:)`, `ZoneState(polyatomic:)`). New app code is presentation only.
 - **`ChemCore` is consumed as-is.** Do not modify the package. If a convenience accessor proves necessary, add it test-first inside `ChemCore` (out of scope for this plan unless forced).
-- **Project generation is hand-authored.** No XcodeGen/Tuist/Xcode-GUI generators. The `.xcodeproj` uses Xcode 16 `objectVersion = 77` file-system-synchronized groups so source files are auto-discovered from the folder (no per-file references to maintain).
+- **Project generation is hand-authored.** No XcodeGen/Tuist/Xcode-GUI generators. The `.xcodeproj` uses Xcode 16 `objectVersion = 70` file-system-synchronized groups so source files are auto-discovered from the folder (no per-file references to maintain).
 - **Theme values are exact**, ported verbatim from the reference (`~/Developer/codews/chem-interactive/src/index.css` and `utils/elementColor.ts`): bg `#1a0a2e`, cation `#00ff88`, anion `#ff4080`, accent `#7040ff`, surface `#2a1a4e`, muted `#4a3a6e`, text `#e0d0ff`.
 - **Reference app** for layout/behavior fidelity: `~/Developer/codews/chem-interactive/src` (`canvas/IonicCanvas.tsx`, `tray/`, `zones/`, `bridge/`).
 - **Verification model:** domain/state logic is already covered by `ChemCore`'s 61 XCTests — do **not** duplicate it. App-side **pure** helpers (model resolution, theme parsing, bond hints, formatting) are unit-tested in a `ChemInteractiveTests` target. SwiftUI **views** are verified by `xcodebuild` compilation (per task) and a simulator **boot + manual smoke** at the final gate.
@@ -137,7 +137,7 @@ struct ChemInteractiveApp: App {
 
 - [ ] **Step 5: Create `ChemInteractive.xcodeproj/project.pbxproj`**
 
-This uses `objectVersion = 77` (Xcode 16) file-system-synchronized root groups, so source files are auto-discovered from the `ChemInteractive/` and `ChemInteractiveTests/` folders — there are no per-file references to maintain. The object IDs are arbitrary 24-char hex constants, unique within the file.
+This uses `objectVersion = 70` (Xcode 16) file-system-synchronized root groups, so source files are auto-discovered from the `ChemInteractive/` and `ChemInteractiveTests/` folders — there are no per-file references to maintain. The object IDs are arbitrary 24-char hex constants, unique within the file.
 
 ```
 // !$*UTF8*$!
@@ -145,7 +145,7 @@ This uses `objectVersion = 77` (Xcode 16) file-system-synchronized root groups, 
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
