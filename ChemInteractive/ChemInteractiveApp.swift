@@ -2,10 +2,13 @@ import SwiftUI
 
 @main
 struct ChemInteractiveApp: App {
+    @State private var model = CanvasModel()
+
     var body: some Scene {
         WindowGroup {
-            Text("ChemInteractive")
-                .font(.largeTitle)
+            ChemCanvasView()
+                .environment(model)
+                .preferredColorScheme(.dark)
         }
     }
 }
