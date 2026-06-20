@@ -27,7 +27,7 @@ struct CrossoverAnimatorView: View {
             if m.anionSub > 1 { subscriptLabel(m.anionSub) }
         }
         .overlay(alignment: .top) {
-            if m.showGcd, model.steps.indices.contains(stepIndex), model.steps[stepIndex] == .gcdReduce {
+            if m.showGcd, m.steps.indices.contains(stepIndex), m.steps[stepIndex] == .gcdReduce {
                 Text("÷\(m.gcdValue)")
                     .font(.system(size: 12)).foregroundStyle(Color(hex: 0xfde047))
                     .offset(y: -24)
@@ -53,9 +53,10 @@ struct CrossoverAnimatorView: View {
             .isolate: 200_000_000, .crisscross: 600_000_000,
             .brackets: 300_000_000, .gcdReduce: 400_000_000, .done: 0,
         ]
-        for i in model.steps.indices {
+        let steps = model.steps   // snapshot once; props are immutable for this view
+        for i in steps.indices {
             withAnimation(.easeOut(duration: 0.25)) { stepIndex = i }
-            let step = model.steps[i]
+            let step = steps[i]
             if step == .done { break }
             try? await Task.sleep(nanoseconds: durationNs[step] ?? 400_000_000)
         }
