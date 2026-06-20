@@ -57,4 +57,10 @@ final class IonFormatTests: XCTestCase {
                            valenceElectrons: 0, oxidationStates: [-1], derivedCharge: -1, status: .ionized)
         XCTAssertEqual(chargeExplanation(oh), "OH is a polyatomic ion with a fixed charge of -1")
     }
+
+    func test_chargeExplanation_metalloid() {
+        let b = ZoneState(symbol: "B", elementClass: .metalloid, isPolyatomic: false, isTransition: false,
+                          valenceElectrons: 3, oxidationStates: [3], derivedCharge: 3, status: .ionized)
+        XCTAssertEqual(chargeExplanation(b), "B has 3 valence electrons → loses 3e⁻ → B³⁺")
+    }
 }

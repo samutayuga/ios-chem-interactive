@@ -54,4 +54,13 @@ final class CanvasModelTests: XCTestCase {
         model.clearSelection()
         XCTAssertNil(model.selectedToken)
     }
+
+    func test_selectTwiceTogglesOff() {
+        let model = CanvasModel()
+        let na = TokenTransfer(symbol: "Na", isPolyatomic: false)
+        model.select(na)
+        XCTAssertEqual(model.selectedToken, na)
+        model.select(na)                       // re-selecting the same token clears it
+        XCTAssertNil(model.selectedToken)
+    }
 }
