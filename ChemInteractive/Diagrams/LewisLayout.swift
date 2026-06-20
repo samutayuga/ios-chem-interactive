@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import ChemCore
 
 // MARK: - Cation/anion ordering (shared by ionic diagrams + ExplanationModalView)
@@ -73,8 +74,6 @@ private let dotRing: [(dx: CGFloat, dy: CGFloat)] = [
 func dotPositions(_ n: Int) -> [(dx: CGFloat, dy: CGFloat)] {
     Array(dotRing.prefix(max(0, min(n, 8))))
 }
-
-import Foundation
 
 // MARK: - Covalent layout
 

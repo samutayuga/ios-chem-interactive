@@ -153,6 +153,7 @@ Expected: FAIL — `ionicPair`/`crossoverModel`/`lewisTransfer`/`dotPositions` n
 
 ```swift
 import CoreGraphics
+import Foundation
 import ChemCore
 
 // MARK: - Cation/anion ordering (shared by ionic diagrams + ExplanationModalView)
@@ -331,8 +332,6 @@ Expected: FAIL — `covalentLayout`/`peripheralPositions`/`lonePairAngles`/`meta
 - [ ] **Step 3: Append to `ChemInteractive/Diagrams/LewisLayout.swift`**
 
 ```swift
-import Foundation
-
 // MARK: - Covalent layout
 
 struct CovalentLayout: Equatable {
