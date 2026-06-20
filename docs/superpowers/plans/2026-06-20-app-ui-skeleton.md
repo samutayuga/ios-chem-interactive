@@ -409,6 +409,7 @@ This uses `objectVersion = 77` (Xcode 16) file-system-synchronized root groups, 
 				PRODUCT_BUNDLE_IDENTIFIER = com.cheminteractive.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_ENABLE_TESTABILITY = YES;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
@@ -483,10 +484,12 @@ This uses `objectVersion = 77` (Xcode 16) file-system-synchronized root groups, 
 /* Begin XCSwiftPackageProductDependency section */
 		AA0000000000000000001A /* ChemCore */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = AA00000000000000000019 /* XCLocalSwiftPackageReference "ChemCore" */;
 			productName = ChemCore;
 		};
 		AA0000000000000000001E /* ChemCore */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = AA00000000000000000019 /* XCLocalSwiftPackageReference "ChemCore" */;
 			productName = ChemCore;
 		};
 /* End XCSwiftPackageProductDependency section */
