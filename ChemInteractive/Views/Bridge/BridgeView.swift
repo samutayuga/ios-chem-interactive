@@ -12,29 +12,42 @@ struct BridgeView: View {
 
             switch state.canvasPhase {
             case .animatingCrossover:
-                // Plan 2 stub: immediately advance the phase machine. Plan 3 animates here.
-                // Defer one runloop turn so the phase mutation doesn't run during the
-                // view update that presented this branch (avoids the SwiftUI
-                // "Modifying state during view update" runtime warning).
-                ProgressView()
-                    .tint(Theme.accent)
-                    .onAppear {
-                        DispatchQueue.main.async { model.send(.crossoverComplete) }
+                if let a = state.slotA, let b = state.slotB {
+                    let pair = ionicPair(a, b)
+                    CrossoverAnimatorView(cation: pair.cation, anion: pair.anion) {
+                        model.send(.crossoverComplete)
                     }
+                }
 
             case .complete:
                 if let a = state.slotA, let b = state.slotB {
-                    IonicCompletePlaceholder(slotA: a, slotB: b) { model.send(.reset) }
+                    let pair = ionicPair(a, b)
+                    VStack(spacing: 12) {
+                        if let cc = pair.cation.derivedCharge, let ac = pair.anion.derivedCharge {
+                            Text(ionicFormula(cationSymbol: pair.cation.symbol, cationCharge: cc,
+                                              anionSymbol: pair.anion.symbol, anionCharge: ac,
+                                              anionIsPolyatomic: pair.anion.isPolyatomic))
+                                .font(.system(size: 22, weight: .bold)).foregroundStyle(.white)
+                        }
+                        BondingDiagramView(cation: pair.cation, anion: pair.anion)
+                        ResetButton { model.send(.reset) }
+                    }
                 }
 
             case .showingCovalent:
                 if let a = state.slotA, let b = state.slotB {
-                    CovalentPlaceholder(slotA: a, slotB: b) { model.send(.reset) }
+                    VStack(spacing: 12) {
+                        CovalentLewisView(slotA: a, slotB: b)
+                        ResetButton { model.send(.reset) }
+                    }
                 }
 
             case .showingMetallic:
                 if let a = state.slotA, let b = state.slotB {
-                    MetallicPlaceholder(slotA: a, slotB: b) { model.send(.reset) }
+                    VStack(spacing: 12) {
+                        MetallicSeaView(slotA: a, slotB: b)
+                        ResetButton { model.send(.reset) }
+                    }
                 }
 
             default:
