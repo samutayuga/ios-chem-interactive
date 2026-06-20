@@ -3,6 +3,9 @@ import PackageDescription
 
 let package = Package(
     name: "ChemCore",
+    platforms: [
+        .macOS(.v13), .iOS(.v16),
+    ],
     products: [
         .library(name: "ChemCore", targets: ["ChemCore"]),
     ],
