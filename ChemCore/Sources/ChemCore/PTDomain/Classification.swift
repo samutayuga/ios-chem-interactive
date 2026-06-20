@@ -53,7 +53,7 @@ public enum Category: String, Equatable {
     case actinide = "Actinide"
 }
 
-public enum ElementClass: String, Equatable {
+public enum ElementClass: String, Equatable, Sendable {
     case metal = "Metal"
     case nonMetal = "NonMetal"
     case metalloid = "Metalloid"

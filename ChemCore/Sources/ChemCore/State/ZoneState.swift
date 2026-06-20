@@ -1,4 +1,4 @@
-public struct ZoneState: Equatable {
+public struct ZoneState: Equatable, Sendable {
     public var symbol: String
     public var elementClass: ElementClass
     public var isPolyatomic: Bool

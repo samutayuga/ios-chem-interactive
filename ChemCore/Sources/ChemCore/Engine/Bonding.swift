@@ -1,4 +1,4 @@
-public enum BondingType: String, Equatable {
+public enum BondingType: String, Equatable, Sendable {
     case ionic = "Ionic", covalent = "Covalent", metallic = "Metallic"
 }
 

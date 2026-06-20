@@ -1,4 +1,4 @@
-public enum CanvasPhase: Equatable {
+public enum CanvasPhase: Equatable, Sendable {
     case selecting
     case slotAFilled
     case explaining
@@ -13,6 +13,6 @@ public enum Slot: Equatable {
     public var other: Slot { self == .a ? .b : .a }
 }
 
-public enum ZoneStatus: Equatable {
+public enum ZoneStatus: Equatable, Sendable {
     case neutral, deducing, ionized
 }
