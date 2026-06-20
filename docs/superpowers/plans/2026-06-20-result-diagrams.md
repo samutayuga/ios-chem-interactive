@@ -413,37 +413,20 @@ git commit -m "feat: add covalent and metallic layout helpers"
 
 ---
 
-### Task 3: Shared ResetButton + refactor ExplanationModalView onto shared ionicPair
+### Task 3: Refactor ExplanationModalView onto the shared ionicPair
 
 **Files:**
-- Create: `ChemInteractive/Views/Bridge/ResetButton.swift`
 - Modify: `ChemInteractive/Views/Bridge/ExplanationModalView.swift:11-18` (remove its private `ionicPair`)
 
 **Interfaces:**
-- Consumes: `Theme` (Task-3 ResetButton), `ionicPair` (Task 1).
-- Produces: `struct ResetButton: View` (internal) — `init(action: () -> Void)`.
+- Consumes: `ionicPair` (Task 1).
+- Produces: nothing new.
 
-Note: `DiagramPlaceholders.swift` keeps its file-private `ResetButton` (no collision with the new internal one — a private *type* is shadowed within its file). Its free-function `ionicPair` was already removed in Task 1 (a top-level `private func` collides with the internal one as an ambiguous overload), so `DiagramPlaceholders` now calls the shared `ionicPair`. `DiagramPlaceholders.swift` is deleted in Task 8.
+Note: the shared `ResetButton` view is **not** created here — it would collide with the file-private `ResetButton` still living in `DiagramPlaceholders.swift` (a `private` and an `internal` top-level type of the same name are an "invalid redeclaration" in Swift, and `DiagramPlaceholders` cannot be deleted until `BridgeView` is rewired off its placeholder structs). `ResetButton.swift` is therefore created in **Task 8**, immediately after `DiagramPlaceholders.swift` is deleted. The diagram views (Tasks 4–7) do not use `ResetButton` — `BridgeView` wraps them with it in Task 8.
 
-- [ ] **Step 1: Create `ChemInteractive/Views/Bridge/ResetButton.swift`**
+`ExplanationModalView`'s `ionicPair` is a struct **method** (not a free function), so it simply shadows the free `ionicPair` until removed — there is no overload ambiguity, and removing it is safe with `DiagramPlaceholders.swift` still present.
 
-```swift
-import SwiftUI
-
-/// The small "Reset" capsule shown under each result diagram.
-struct ResetButton: View {
-    let action: () -> Void
-    var body: some View {
-        Button("Reset", action: action)
-            .font(.system(size: 12))
-            .foregroundStyle(Theme.muted)
-            .padding(.horizontal, 12).padding(.vertical, 4)
-            .overlay(Capsule().stroke(Theme.muted.opacity(0.6), lineWidth: 1))
-    }
-}
-```
-
-- [ ] **Step 2: Remove the private `ionicPair` from `ExplanationModalView.swift`**
+- [ ] **Step 1: Remove the private `ionicPair` from `ExplanationModalView.swift`**
 
 Delete these lines (currently `ExplanationModalView.swift:11-18`):
 
@@ -460,16 +443,16 @@ Delete these lines (currently `ExplanationModalView.swift:11-18`):
 
 The remaining call sites in that file (`let pair = ionicPair(a, b)`) now resolve to the internal `ionicPair` from `LewisLayout.swift` — identical behavior.
 
-- [ ] **Step 3: Verify it compiles and all tests still pass**
+- [ ] **Step 2: Verify it compiles and all tests still pass**
 
 Run: `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17' 2>&1 | tail -12`
 Expected: `TEST SUCCEEDED` (full suite still green; `ExplanationModalView` now uses the shared helper).
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add ChemInteractive/Views/Bridge/ResetButton.swift ChemInteractive/Views/Bridge/ExplanationModalView.swift
-git commit -m "refactor: share ResetButton and ionicPair via LewisLayout"
+git add ChemInteractive/Views/Bridge/ExplanationModalView.swift
+git commit -m "refactor: use shared ionicPair in ExplanationModalView"
 ```
 
 ---
@@ -996,14 +979,40 @@ git commit -m "feat: add metallic electron-sea view"
 ### Task 8: Wire the diagrams into BridgeView and delete the placeholders
 
 **Files:**
-- Modify: `ChemInteractive/Views/Bridge/BridgeView.swift`
 - Delete: `ChemInteractive/Views/Bridge/DiagramPlaceholders.swift`
+- Create: `ChemInteractive/Views/Bridge/ResetButton.swift` (after the delete — frees the `ResetButton` name)
+- Modify: `ChemInteractive/Views/Bridge/BridgeView.swift`
 
 **Interfaces:**
-- Consumes: `CrossoverAnimatorView` (Task 4), `BondingDiagramView` (Task 5), `CovalentLewisView` (Task 6), `MetallicSeaView` (Task 7), `ResetButton` (Task 3), `ionicPair` (Task 1), `ionicFormula` (Plan 2), `ChemCore` (`CanvasState`, `CanvasPhase`, `CanvasAction`).
-- Produces: a `BridgeView` whose result phases render the real diagrams.
+- Consumes: `CrossoverAnimatorView` (Task 4), `BondingDiagramView` (Task 5), `CovalentLewisView` (Task 6), `MetallicSeaView` (Task 7), `ionicPair` (Task 1), `ionicFormula` (Plan 2), `Theme`, `ChemCore` (`CanvasState`, `CanvasPhase`, `CanvasAction`).
+- Produces: `struct ResetButton: View` (internal, `init(action: () -> Void)`) and a `BridgeView` whose result phases render the real diagrams.
 
-- [ ] **Step 1: Replace the body of `ChemInteractive/Views/Bridge/BridgeView.swift`**
+**Order matters:** delete `DiagramPlaceholders.swift` (Step 1) *before* creating `ResetButton.swift` (Step 2) — `DiagramPlaceholders` holds a file-private `ResetButton` that would otherwise be an "invalid redeclaration" against the new internal one.
+
+- [ ] **Step 1: Delete the placeholder file**
+
+Run: `git rm ChemInteractive/Views/Bridge/DiagramPlaceholders.swift`
+Expected: the file is removed. Its `ResetButton`, `ionicPair`, and three placeholder structs are replaced by the shared helpers and the real diagrams. (At this point `BridgeView` will not compile until Step 3 — that's expected within this task; the build gate is Step 4.)
+
+- [ ] **Step 2: Create `ChemInteractive/Views/Bridge/ResetButton.swift`**
+
+```swift
+import SwiftUI
+
+/// The small "Reset" capsule shown under each result diagram.
+struct ResetButton: View {
+    let action: () -> Void
+    var body: some View {
+        Button("Reset", action: action)
+            .font(.system(size: 12))
+            .foregroundStyle(Theme.muted)
+            .padding(.horizontal, 12).padding(.vertical, 4)
+            .overlay(Capsule().stroke(Theme.muted.opacity(0.6), lineWidth: 1))
+    }
+}
+```
+
+- [ ] **Step 3: Replace the body of `ChemInteractive/Views/Bridge/BridgeView.swift`**
 
 Replace the whole file with:
 
@@ -1069,12 +1078,7 @@ struct BridgeView: View {
 }
 ```
 
-- [ ] **Step 2: Delete the placeholder file**
-
-Run: `git rm ChemInteractive/Views/Bridge/DiagramPlaceholders.swift`
-Expected: the file is removed. Its `ResetButton`/`ionicPair`/three placeholder structs are now wholly replaced by the shared helpers and the real diagrams.
-
-- [ ] **Step 3: Build, boot, and confirm the app launches without crashing**
+- [ ] **Step 4: Build, boot, and confirm the app launches without crashing**
 
 Run:
 ```bash
@@ -1086,15 +1090,15 @@ xcrun simctl launch "iPhone 17" com.cheminteractive.app
 ```
 Expected: `BUILD SUCCEEDED`; the launch prints `com.cheminteractive.app: <PID>` (no crash; initial tray/zones screen unchanged).
 
-- [ ] **Step 4: Run the full test suite (regression gate)**
+- [ ] **Step 5: Run the full test suite (regression gate)**
 
 Run: `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17' 2>&1 | tail -12`
 Expected: `TEST SUCCEEDED` — all suites pass (LewisLayout, CovalentMetallicLayout, Smoke, CanvasModel, Theme, IonFormat).
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add ChemInteractive/Views/Bridge/BridgeView.swift
+git add ChemInteractive/Views/Bridge/BridgeView.swift ChemInteractive/Views/Bridge/ResetButton.swift
 git rm --cached ChemInteractive/Views/Bridge/DiagramPlaceholders.swift 2>/dev/null; true
 git commit -m "feat: route bridge phases to real result diagrams"
 ```
