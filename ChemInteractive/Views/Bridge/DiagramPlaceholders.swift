@@ -1,15 +1,6 @@
 import SwiftUI
 import ChemCore
 
-/// Cation/anion ordering shared by the placeholders.
-private func ionicPair(_ a: ZoneState, _ b: ZoneState) -> (cation: ZoneState, anion: ZoneState) {
-    if let ca = a.derivedCharge, let cb = b.derivedCharge, ca != 0 || cb != 0 {
-        return ca > 0 ? (a, b) : (b, a)
-    }
-    let aCation = a.elementClass == .metal || a.elementClass == .metalloid
-    return aCation ? (a, b) : (b, a)
-}
-
 private struct ResetButton: View {
     let action: () -> Void
     var body: some View {
