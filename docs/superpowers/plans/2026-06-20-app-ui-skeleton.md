@@ -198,7 +198,6 @@ This uses `objectVersion = 77` (Xcode 16) file-system-synchronized root groups, 
 			children = (
 				AA00000000000000000008 /* ChemInteractive */,
 				AA00000000000000000009 /* ChemInteractiveTests */,
-				AA00000000000000000020 /* ChemCore */,
 				AA00000000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -210,14 +209,6 @@ This uses `objectVersion = 77` (Xcode 16) file-system-synchronized root groups, 
 				AA00000000000000000007 /* ChemInteractiveTests.xctest */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		AA00000000000000000020 /* ChemCore */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = ChemCore;
-			path = ChemCore;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -396,6 +387,7 @@ This uses `objectVersion = 77` (Xcode 16) file-system-synchronized root groups, 
 				PRODUCT_BUNDLE_IDENTIFIER = com.cheminteractive.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_ENABLE_TESTABILITY = YES;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
