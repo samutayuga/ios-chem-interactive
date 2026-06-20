@@ -56,7 +56,6 @@
 			children = (
 				AA00000000000000000008 /* ChemInteractive */,
 				AA00000000000000000009 /* ChemInteractiveTests */,
-				AA00000000000000000020 /* ChemCore */,
 				AA00000000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -68,14 +67,6 @@
 				AA00000000000000000007 /* ChemInteractiveTests.xctest */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		AA00000000000000000020 /* ChemCore */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = ChemCore;
-			path = ChemCore;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
