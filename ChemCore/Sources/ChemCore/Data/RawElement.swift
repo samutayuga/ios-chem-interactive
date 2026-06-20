@@ -34,4 +34,15 @@ public struct RawElement: Decodable, Equatable {
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         return try decoder.decode([RawElement].self, from: data)
     }
+
+    /// Loads all elements from the bundled elements.raw.json shipped with
+    /// the ChemCore module. Uses Bundle.module so the lookup is anchored to
+    /// ChemCore's own resource bundle (not the caller's bundle).
+    public static func loadAll() throws -> [RawElement] {
+        guard let url = Bundle.module.url(forResource: "elements.raw", withExtension: "json") else {
+            throw CocoaError(.fileNoSuchFile)
+        }
+        let data = try Data(contentsOf: url)
+        return try decodeAll(from: data)
+    }
 }
