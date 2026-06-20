@@ -8,15 +8,6 @@ struct ExplanationModalView: View {
     private var slotB: ZoneState? { model.state.slotB }
     private var bonding: BondingType? { model.state.bondingType }
 
-    // Cation/anion ordering — prefer derivedCharge, else Metal/Metalloid is the cation.
-    private func ionicPair(_ a: ZoneState, _ b: ZoneState) -> (cation: ZoneState, anion: ZoneState) {
-        if let ca = a.derivedCharge, let cb = b.derivedCharge, ca != 0 || cb != 0 {
-            return ca > 0 ? (a, b) : (b, a)
-        }
-        let aCation = a.elementClass == .metal || a.elementClass == .metalloid
-        return aCation ? (a, b) : (b, a)
-    }
-
     private var applyEnabled: Bool {
         guard bonding == .ionic else { return true }
         return slotA?.status != .deducing && slotB?.status != .deducing
