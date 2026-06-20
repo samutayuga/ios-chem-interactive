@@ -219,6 +219,29 @@ font.
 - **Build/boot:** `xcodebuild -scheme ChemInteractive -destination
   'platform=iOS Simulator,name=iPhone 17'` compiles and launches in the simulator.
 
+## 9a. Deliverable size
+
+The native approach is **smaller** than the React/WASM deliverable, not larger.
+
+| Artifact | Size | In app bundle? |
+|---|---|---|
+| `elements.raw.json` (minified, incl. isotopes) | ~48 KB | yes |
+| `elements.raw.json` (minified, no isotopes) | ~26 KB | only if isotope features dropped |
+| `PTDomain` compiled Swift (pure logic) | a few KB | yes |
+| `elements.golden.json` (test fixture) | ~74 KB | no — dev/test only |
+| 118 source YAML files | 472 KB total | **no — build-time source only** |
+| Rust→WASM binary (React app ships this) | 150 KB | **no — never in our app** |
+
+Notes:
+- The **118 YAML files do not ship**. A dev script reads them from
+  `~/Developer/codews/periodic-table/data/elements/` and emits the single ~48 KB
+  `elements.raw.json` into `Resources/`. The YAMLs are not copied into the iOS repo.
+- The app contains **no WebAssembly**, so the 150 KB WASM binary + its JS glue are gone.
+- The dominant size of any iOS `.app` is the fixed Swift/SwiftUI runtime; our data + ported
+  domain logic add under ~100 KB on top of that.
+- Size lever if needed: drop `isotopes` (→ ~26 KB) at the cost of the
+  atomic-mass-from-isotopes feature. Default: keep isotopes.
+
 ## 10. Risks
 
 - **`PTDomain` port fidelity** (Rust → Swift). Mitigation: translate the Rust crate's own
