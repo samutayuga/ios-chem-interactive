@@ -1083,7 +1083,7 @@ func chargeExplanation(_ zone: ZoneState) -> String {
     let ve = zone.valenceElectrons
     let plural = ve != 1 ? "s" : ""
     if zone.elementClass == .metal || zone.elementClass == .metalloid {
-        let c = zone.derivedCharge ?? 0
+        let c = Swift.abs(zone.derivedCharge ?? 0)
         return "\(zone.symbol) has \(ve) valence electron\(plural) → loses \(c)e⁻ → \(formatIon(symbol: zone.symbol, charge: c))"
     }
     let c = Swift.abs(zone.derivedCharge ?? 0)
