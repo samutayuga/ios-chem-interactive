@@ -17,6 +17,11 @@ struct BridgeView: View {
                     CrossoverAnimatorView(cation: pair.cation, anion: pair.anion) {
                         model.send(.crossoverComplete)
                     }
+                } else {
+                    // Defensive: the reducer always fills both slots before this phase,
+                    // but never leave the machine wedged with no path to .complete.
+                    ProgressView().tint(Theme.accent)
+                        .onAppear { DispatchQueue.main.async { model.send(.crossoverComplete) } }
                 }
 
             case .complete:
