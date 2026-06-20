@@ -76,3 +76,63 @@ final class LewisLayoutTests: XCTestCase {
         XCTAssertEqual(dotPositions(1).first?.dx, 22) // first slot = right
     }
 }
+
+final class CovalentMetallicLayoutTests: XCTestCase {
+    private func atom(_ symbol: String, ve: Int) -> ZoneState {
+        ZoneState(symbol: symbol, elementClass: .nonMetal, isPolyatomic: false, isTransition: false,
+                  valenceElectrons: ve, oxidationStates: [], derivedCharge: nil, status: .neutral)
+    }
+    private func metal(_ symbol: String, ve: Int) -> ZoneState {
+        ZoneState(symbol: symbol, elementClass: .metal, isPolyatomic: false, isTransition: false,
+                  valenceElectrons: ve, oxidationStates: [], derivedCharge: nil, status: .neutral)
+    }
+
+    func test_covalent_CO2() {
+        let l = covalentLayout(slotA: atom("C", ve: 4), slotB: atom("O", ve: 6))
+        XCTAssertTrue(l.centralIsA)          // C is central
+        XCTAssertEqual(l.nPeripheral, 2)
+        XCTAssertEqual(l.bondOrder, 2)
+        XCTAssertEqual(l.centralLone, 0)
+        XCTAssertEqual(l.peripheralLone, 2)
+    }
+
+    func test_covalent_H2O() {
+        let l = covalentLayout(slotA: atom("H", ve: 1), slotB: atom("O", ve: 6))
+        XCTAssertFalse(l.centralIsA)         // O is central
+        XCTAssertEqual(l.nPeripheral, 2)     // 2 H
+        XCTAssertEqual(l.bondOrder, 1)
+        XCTAssertEqual(l.centralLone, 2)
+        XCTAssertEqual(l.peripheralLone, 0)
+    }
+
+    func test_covalent_N2_triple() {
+        let l = covalentLayout(slotA: atom("N", ve: 5), slotB: atom("N", ve: 5))
+        XCTAssertEqual(l.nPeripheral, 1)
+        XCTAssertEqual(l.bondOrder, 3)
+        XCTAssertEqual(l.centralLone, 1)
+        XCTAssertEqual(l.peripheralLone, 1)
+    }
+
+    func test_peripheralPositions_counts() {
+        let c = CGPoint(x: 100, y: 100)
+        XCTAssertEqual(peripheralPositions(1, center: c, distance: 50).count, 1)
+        XCTAssertEqual(peripheralPositions(2, center: c, distance: 50).count, 2)
+        XCTAssertEqual(peripheralPositions(3, center: c, distance: 50).count, 3)
+        XCTAssertEqual(peripheralPositions(4, center: c, distance: 50).count, 4)
+        XCTAssertEqual(peripheralPositions(5, center: c, distance: 50).count, 1) // 5+ simplified
+    }
+
+    func test_lonePairAngles_avoidsBond() {
+        let angles = lonePairAngles(bondAngles: [0], count: 2)
+        XCTAssertEqual(angles.count, 2)
+        // None coincides with the bond direction (0); the farthest slot (π) is chosen.
+        XCTAssertFalse(angles.contains { abs($0) < 0.01 })
+        XCTAssertTrue(angles.contains { abs($0 - Double.pi) < 0.01 })
+    }
+
+    func test_metallic_electronCount_andPattern() {
+        XCTAssertEqual(metallicElectronsShown(slotA: metal("Na", ve: 1), slotB: metal("Na", ve: 1)), 6)
+        XCTAssertEqual(metallicElectronsShown(slotA: metal("Al", ve: 3), slotB: metal("Al", ve: 3)), 12) // capped
+        XCTAssertEqual(metallicIonIndexPattern, [0, 1, 0, 1, 0, 1])
+    }
+}

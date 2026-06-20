@@ -73,3 +73,71 @@ private let dotRing: [(dx: CGFloat, dy: CGFloat)] = [
 func dotPositions(_ n: Int) -> [(dx: CGFloat, dy: CGFloat)] {
     Array(dotRing.prefix(max(0, min(n, 8))))
 }
+
+import Foundation
+
+// MARK: - Covalent layout
+
+struct CovalentLayout: Equatable {
+    let centralIsA: Bool      // is slotA the central atom?
+    let nPeripheral: Int
+    let bondOrder: Int
+    let centralLone: Int      // lone pairs on the central atom
+    let peripheralLone: Int   // lone pairs on each peripheral atom
+}
+
+func covalentLayout(slotA: ZoneState, slotB: ZoneState) -> CovalentLayout {
+    let s = calcStoich(veA: slotA.valenceElectrons, veB: slotB.valenceElectrons)
+    let centralIsA = s.nA <= s.nB                 // central = the smaller-count atom
+    let central = centralIsA ? slotA : slotB
+    let peripheral = centralIsA ? slotB : slotA
+    let nPeripheral = centralIsA ? s.nB : s.nA
+    let centralLone = max(0, (central.valenceElectrons - s.bondOrder * nPeripheral) / 2)
+    let peripheralLone = max(0, (peripheral.valenceElectrons - s.bondOrder) / 2)
+    return CovalentLayout(centralIsA: centralIsA, nPeripheral: nPeripheral,
+                          bondOrder: s.bondOrder, centralLone: centralLone, peripheralLone: peripheralLone)
+}
+
+/// Peripheral-atom centres for 1–4 atoms; 5+ collapses to a single atom (view adds an ×N badge).
+func peripheralPositions(_ n: Int, center: CGPoint, distance d: CGFloat) -> [CGPoint] {
+    switch n {
+    case 1:
+        return [CGPoint(x: center.x + d, y: center.y)]
+    case 2:
+        return [CGPoint(x: center.x - d, y: center.y), CGPoint(x: center.x + d, y: center.y)]
+    case 3:
+        let a = CGFloat.pi / 3
+        return [CGPoint(x: center.x - d, y: center.y),
+                CGPoint(x: center.x + d * cos(a), y: center.y - d * sin(a)),
+                CGPoint(x: center.x + d * cos(a), y: center.y + d * sin(a))]
+    case 4:
+        return [CGPoint(x: center.x, y: center.y - d), CGPoint(x: center.x + d, y: center.y),
+                CGPoint(x: center.x, y: center.y + d), CGPoint(x: center.x - d, y: center.y)]
+    default:
+        return [CGPoint(x: center.x + d, y: center.y)]
+    }
+}
+
+/// `count` lone-pair directions chosen from the 8 cardinal/diagonal slots, farthest from all bonds.
+func lonePairAngles(bondAngles: [Double], count: Int) -> [Double] {
+    guard count > 0 else { return [] }
+    let candidates = (0..<8).map { Double($0) * .pi / 4 }
+    let scored = candidates.map { a -> (angle: Double, dist: Double) in
+        let minDist = bondAngles.reduce(Double.pi) { m, ba in
+            let diff = abs((a - ba + 3 * .pi).truncatingRemainder(dividingBy: 2 * .pi) - .pi)
+            return Swift.min(m, diff)
+        }
+        return (a, minDist)
+    }
+    return scored.sorted { $0.dist > $1.dist }.prefix(count).map { $0.angle }
+}
+
+// MARK: - Metallic layout
+
+/// A/B alternation over the 3×2 cation lattice (homonuclear → both indices map to the same symbol).
+let metallicIonIndexPattern: [Int] = [0, 1, 0, 1, 0, 1]
+
+/// Delocalised-electron count for the sea (capped at the 12-slot pool), via ChemCore.
+func metallicElectronsShown(slotA: ZoneState, slotB: ZoneState) -> Int {
+    metallicElectronCount(veA: slotA.valenceElectrons, veB: slotB.valenceElectrons)
+}
