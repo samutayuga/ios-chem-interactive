@@ -24,25 +24,41 @@ JSON dumped from the existing WASM. No Rust/FFI (Approach B) and no WebView wrap
 disproportionate toolchain; the chemistry logic is small and well-isolated, so porting is
 low-risk and unit-testable.
 
-## 3. Data strategy
+## 3. Data & domain strategy
 
-The React app's 118 elements live in a compiled Rust→WASM binary. Swift cannot read it
-directly. A **one-time build-time Node script** (run from the React repo) dumps the exact
-objects the React app consumes:
+**Authoritative source of chemistry domain logic:** the Rust workspace at
+`~/Developer/codews/periodic-table`, crate **`pt-domain`** (the logic that compiles to the
+`pt-wasm` the React app uses). It is pure and stateless, and computes every derived field
+from atomic number + raw stored data:
 
-```js
-import { PeriodicTable } from './src/wasm/pkg/pt_wasm.js';
-const all = PeriodicTable.load().all();   // 118 elements, verified
-// write JSON array to ios-chem-interactive/ChemInteractive/Resources/elements.json
-```
+- `config.rs` — `electron_configuration(z)` via Madelung (n+l) fill order + a ground-state
+  **anomaly table** (Cr, Cu, Nb, Mo, Ru, Rh, Pd, Ag, La, Ce, Gd, Pt, Au, Ac, Th, Pa, U, Np,
+  Cm); subshell capacities; `unpaired_electrons` (Hund), `electrons_in(n, subshell)`.
+- `classification.rs` — `block`, `period`, `group` (1–18; f-block→3 by convention),
+  `category`, `element_class` (Metal/NonMetal/Metalloid), `oxidation_states` — all derived
+  from the electron configuration / atomic number, with documented heuristics.
+- `calc.rs` — `atomic_mass_from_isotopes` (abundance-weighted), `isotope_mass_matches`,
+  `state_at(temperature_k)`.
 
-Verified output includes all derived fields: `group`, `period`, `block` ("S/P/D/F"),
-`category` (e.g. `TransitionMetal`), `class` ("Metal"/"NonMetal"/"Metalloid"),
-`oxidation_states`, `electron_configuration`, `computed_atomic_mass`, `mass_number`,
-`isotopes`. This is byte-for-byte the same data the React UI sees — no reconstruction.
+**Decision (per user direction): port `pt-domain` to Swift** rather than snapshotting the
+WASM's computed output. The iOS app carries the real domain model and computes derived
+fields from raw data, exactly as Rust does. This is more faithful and more robust than a
+frozen JSON snapshot, and the Rust crate's extensive `#[cfg(test)]` vectors translate 1:1
+into XCTest fixtures — guaranteeing the port matches the source.
 
-`elements.json` is committed into the iOS repo (not regenerated at app runtime). The dump
-script is also committed for reproducibility.
+**Raw data**: bundle `elements.raw.json` — only the *stored* fields (atomic_number, name,
+symbol, atomic_mass, mass_number, melting_point?, boiling_point?, density?,
+electronegativity?, state, discovery_year?, discoverer?, isotopes), the same fields
+`pt-domain::Element` holds, sourced from the 118 canonical YAML files in
+`periodic-table/data/elements/`. Swift's `PTDomain` computes block/period/group/category/
+class/oxidation_states/electron_configuration/computed_atomic_mass at load time.
+
+**Fidelity guarantee**: a committed script also dumps `elements.golden.json` (the full
+*computed* output from the existing WASM, already verified to produce 118 elements with
+correct fields, e.g. Fe → group 8, period 4, block D, TransitionMetal, oxidation_states
+[2,3], computed_atomic_mass ≈ 55.845). An XCTest loads this golden file and asserts every
+Swift-computed derived field matches the WASM for all 118 elements. The app ships only
+`elements.raw.json` + `PTDomain`; the golden file is a test fixture.
 
 The 6 polyatomic ions are hardcoded constants (matching `src/canvas/constants.ts`):
 OH⁻, NO₃⁻, SO₄²⁻, CO₃²⁻, PO₄³⁻, NH₄⁺.
@@ -57,12 +73,19 @@ ios-chem-interactive/
 ├── ChemInteractive.xcodeproj/
 ├── ChemInteractive/
 │   ├── ChemInteractiveApp.swift          # @main
+│   ├── PTDomain/                          # faithful Swift port of Rust crate pt-domain
+│   │   ├── ElectronConfiguration.swift    # port config.rs (Madelung + anomalies, Hund)
+│   │   ├── Classification.swift           # port classification.rs (block/period/group/
+│   │   │                                  #   category/element_class/oxidation_states)
+│   │   └── Calc.swift                     # port calc.rs (atomic mass, state_at)
 │   ├── Data/
-│   │   ├── Element.swift                  # Codable, mirrors WasmElement
+│   │   ├── RawElement.swift               # Codable, mirrors pt-domain::Element (stored)
+│   │   ├── Element.swift                  # RawElement + PTDomain-computed derived fields
 │   │   ├── PolyatomicIon.swift            # 6 constants
-│   │   └── PeriodicTable.swift            # loads elements.json (replaces WasmProvider)
-│   ├── Engine/                            # pure Swift, no UI — fully unit-tested
-│   │   ├── Valence.swift                  # parseValenceElectrons (port valence.ts)
+│   │   └── PeriodicTable.swift            # loads elements.raw.json (replaces WasmProvider)
+│   ├── Engine/                            # bonding pedagogy logic (lives in React/TS, not Rust)
+│   │   ├── Valence.swift                  # valence electrons for bonding (port valence.ts,
+│   │   │                                  #   driven by PTDomain electron configuration)
 │   │   ├── MathUtil.swift                 # gcd (port gcd.ts)
 │   │   ├── Bonding.swift                  # determineBonding + autoIonize (port reducer.ts)
 │   │   ├── CovalentStoich.swift           # octet stoich + IUPAC order (port CovalentView.tsx)
@@ -86,10 +109,12 @@ ios-chem-interactive/
 │   │   └── Bridge/MetallicSeaView.swift          # electron sea (Canvas + TimelineView)
 │   ├── Theme/Theme.swift                  # exact colors from index.css / elementColor.ts
 │   └── Resources/
-│       ├── elements.json
+│       ├── elements.raw.json              # shipped: raw stored fields only
 │       └── Assets.xcassets
-├── ChemInteractiveTests/                  # XCTest: Engine/ + State/
-├── tools/dump-elements.mjs                # the data dump script
+├── ChemInteractiveTests/                  # XCTest: PTDomain/ + Engine/ + State/ + golden
+│   └── Fixtures/elements.golden.json      # test-only: full computed dump from WASM
+├── tools/dump-elements.mjs                # WASM → elements.golden.json (full computed)
+├── tools/yaml-to-raw-json.mjs             # 118 YAML → elements.raw.json (stored fields)
 └── docs/superpowers/specs/…
 ```
 
@@ -118,19 +143,31 @@ Key rules carried over verbatim:
   else IONIZED with `oxidation_states[0]`.
 - `dismissExplanation` is blocked for Ionic while either slot is still DEDUCING.
 
-## 6. Chemistry engine (pure, unit-tested)
+## 6. Chemistry logic (two layers, both pure & unit-tested)
 
-- **Valence** — strip noble-gas prefix, parse subshells, return highest-shell electron
-  count; fallback `group<=2 ? group : group>=13 ? group-10 : 0`.
-- **gcd** — Euclidean; used to reduce ionic subscripts and covalent stoich.
+**Layer 1 — `PTDomain` (port of Rust `pt-domain`):** the authoritative element model.
+Reproduces `config.rs`, `classification.rs`, `calc.rs` in Swift, computing from atomic
+number + raw data: electron configuration (Madelung order + anomaly table + Hund),
+block/period/group/category/element_class/oxidation_states, atomic-mass-from-isotopes,
+state_at. Built **test-first**, translating the Rust crate's own `#[cfg(test)]` vectors
+into XCTest (e.g. Cr/Cu/Pd anomalies, Fe config, group/category/oxidation_states tables,
+La/Lr boundary, chlorine weighted mass).
+
+**Layer 2 — `Engine` (port of React/TS bonding pedagogy):** logic that lives in the React
+app, not in Rust.
+- **Valence** — valence electrons for bonding, matching `valence.ts` semantics but driven
+  by the authoritative `PTDomain` electron configuration; group-based fallback
+  `group<=2 ? group : group>=13 ? group-10 : 0`.
+- **gcd** — Euclidean; reduces ionic subscripts and covalent stoich.
+- **Bonding** — `determineBonding` (Metal+Metal→Metallic; NonMetal/Metalloid pair→Covalent;
+  else Ionic) + `autoIonize` (transition/empty oxidation_states→DEDUCING else IONIZED with
+  first oxidation state). Polyatomic involved → always Ionic.
 - **CovalentStoich** — `shellTarget(ve)= ve<=2 ?2:8`; `bondsNeeded = max(0,target-ve)`;
-  stoich via gcd of bonds needed → `nA,nB,bondOrder`. IUPAC ordering table (B…F) decides
-  which symbol is written first.
+  stoich via gcd → `nA,nB,bondOrder`. IUPAC ordering table (B…F) decides leading symbol.
 - **Metallic** — `electronCount = min(3*veA + 3*veB, 12)`.
 
-These mirror `valence.ts`, `gcd.ts`, `CovalentView.tsx`, `MetallicView.tsx` and are the
-deterministic core — built **test-first** with XCTest, using known compounds as fixtures
-(NaCl, CaO, MgCl₂, HCl, CO₂, H₂O, N₂, Fe/Cu alloys, etc.).
+Layer 2 is built **test-first** with known compounds as fixtures (NaCl, CaO, MgCl₂, HCl,
+CO₂, H₂O, N₂, Fe/Cu alloys, etc.).
 
 ## 7. UI / interaction
 
@@ -164,15 +201,23 @@ font.
 
 ## 9. Testing & verification
 
-- **Unit (XCTest, TDD):** `Engine/` (valence, gcd, covalent stoich, IUPAC order, metallic
-  count) and `State/` (every reducer transition — mirrors the React reducer tests).
-- **Data:** a test asserts `elements.json` loads to 118 elements and spot-checks Fe
+- **Unit (XCTest, TDD):** `PTDomain/` (electron configuration incl. anomalies, block/period/
+  group/category/element_class/oxidation_states, atomic mass, state_at — translated from the
+  Rust crate's test vectors); `Engine/` (valence, gcd, covalent stoich, IUPAC order, metallic
+  count); `State/` (every reducer transition — mirrors the React reducer tests).
+- **Golden fidelity:** a test loads `Fixtures/elements.golden.json` (full computed WASM dump)
+  and asserts that, for all 118 elements, `PTDomain`-computed block/period/group/category/
+  class/oxidation_states/electron_configuration/computed_atomic_mass match the WASM exactly.
+- **Data:** a test asserts `elements.raw.json` loads to 118 elements and spot-checks Fe
   (oxidation_states [2,3], TransitionMetal, group 8 period 4).
 - **Build/boot:** `xcodebuild -scheme ChemInteractive -destination
   'platform=iOS Simulator,name=iPhone 17'` compiles and launches in the simulator.
 
 ## 10. Risks
 
+- **`PTDomain` port fidelity** (Rust → Swift). Mitigation: translate the Rust crate's own
+  test vectors into XCTest, and run the golden-file assertion against the WASM's computed
+  output for all 118 elements — a regression there fails the build.
 - **Hand-authored pbxproj** is fiddly. Mitigation: keep one target, verify early and often
   with `xcodebuild`; treat a clean build as the gate before adding views.
 - **Diagram animation fidelity** (Framer Motion → SwiftUI) is approximate, not pixel-exact.
