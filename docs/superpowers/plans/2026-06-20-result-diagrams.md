@@ -232,7 +232,7 @@ func dotPositions(_ n: Int) -> [(dx: CGFloat, dy: CGFloat)] {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:ChemInteractiveTests/LewisLayoutTests 2>&1 | tail -20`
-Expected: `TEST SUCCEEDED` (8 tests).
+Expected: `TEST SUCCEEDED` (7 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -424,7 +424,7 @@ git commit -m "feat: add covalent and metallic layout helpers"
 - Consumes: `Theme` (Task-3 ResetButton), `ionicPair` (Task 1).
 - Produces: `struct ResetButton: View` (internal) — `init(action: () -> Void)`.
 
-Note: `DiagramPlaceholders.swift` still has its own `private` `ResetButton` and `private ionicPair`; those are file-private and do not collide with the new internal `ResetButton` / `ionicPair`. `DiagramPlaceholders.swift` is deleted in Task 8.
+Note: `DiagramPlaceholders.swift` keeps its file-private `ResetButton` (no collision with the new internal one — a private *type* is shadowed within its file). Its free-function `ionicPair` was already removed in Task 1 (a top-level `private func` collides with the internal one as an ambiguous overload), so `DiagramPlaceholders` now calls the shared `ionicPair`. `DiagramPlaceholders.swift` is deleted in Task 8.
 
 - [ ] **Step 1: Create `ChemInteractive/Views/Bridge/ResetButton.swift`**
 
