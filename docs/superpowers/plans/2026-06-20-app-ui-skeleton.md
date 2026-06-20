@@ -1777,7 +1777,11 @@ struct BridgeView: View {
                 // Plan 2 stub: immediately advance the phase machine. Plan 3 animates here.
                 ProgressView()
                     .tint(Theme.accent)
-                    .onAppear { model.send(.crossoverComplete) }
+                    .onAppear {
+                        // Defer one runloop turn to avoid the SwiftUI
+                        // "Modifying state during view update" warning.
+                        DispatchQueue.main.async { model.send(.crossoverComplete) }
+                    }
 
             case .complete:
                 if let a = state.slotA, let b = state.slotB {

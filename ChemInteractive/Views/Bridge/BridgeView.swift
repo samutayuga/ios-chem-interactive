@@ -13,9 +13,14 @@ struct BridgeView: View {
             switch state.canvasPhase {
             case .animatingCrossover:
                 // Plan 2 stub: immediately advance the phase machine. Plan 3 animates here.
+                // Defer one runloop turn so the phase mutation doesn't run during the
+                // view update that presented this branch (avoids the SwiftUI
+                // "Modifying state during view update" runtime warning).
                 ProgressView()
                     .tint(Theme.accent)
-                    .onAppear { model.send(.crossoverComplete) }
+                    .onAppear {
+                        DispatchQueue.main.async { model.send(.crossoverComplete) }
+                    }
 
             case .complete:
                 if let a = state.slotA, let b = state.slotB {
