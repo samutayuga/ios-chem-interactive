@@ -18,11 +18,12 @@ periodic-table "extra" data (melting/boiling points, isotopes) beyond what bondi
 
 ## 2. Approach (selected: A)
 
-Native SwiftUI app + pure-Swift chemistry engine + element data baked into the bundle as
-JSON dumped from the existing WASM. No Rust/FFI (Approach B) and no WebView wrapper
-(Approach C). Rationale: only Approach A is a genuine native Swift app without a
-disproportionate toolchain; the chemistry logic is small and well-isolated, so porting is
-low-risk and unit-testable.
+Native SwiftUI app + pure-Swift chemistry domain logic (ported from Rust `pt-domain`) +
+raw element data baked into the bundle as JSON. **The app contains no WebAssembly** — no
+Rust/FFI (Approach B), no WASM runtime, and no WebView wrapper (Approach C); interface and
+domain logic are fully integrated in native Swift. Rationale: only Approach A is a genuine
+native Swift app without a disproportionate toolchain; the chemistry logic is small and
+well-isolated, so porting is low-risk and unit-testable.
 
 ## 3. Data & domain strategy
 
@@ -40,25 +41,30 @@ from atomic number + raw stored data:
 - `calc.rs` — `atomic_mass_from_isotopes` (abundance-weighted), `isotope_mass_matches`,
   `state_at(temperature_k)`.
 
-**Decision (per user direction): port `pt-domain` to Swift** rather than snapshotting the
-WASM's computed output. The iOS app carries the real domain model and computes derived
-fields from raw data, exactly as Rust does. This is more faithful and more robust than a
-frozen JSON snapshot, and the Rust crate's extensive `#[cfg(test)]` vectors translate 1:1
-into XCTest fixtures — guaranteeing the port matches the source.
+**Decision (per user direction): port `pt-domain` to native Swift** rather than running or
+snapshotting WASM. A native app uses no WebAssembly — the domain logic is compiled Swift,
+integrated directly with the SwiftUI interface. The Rust/WASM is only the *source we port
+from*; **no `.wasm`, FFI, or JS bridge ships in the app**. The iOS app carries the real
+domain model and computes derived fields from raw data exactly as Rust does, and the Rust
+crate's extensive `#[cfg(test)]` vectors translate 1:1 into XCTest — guaranteeing the port
+matches the source.
 
-**Raw data**: bundle `elements.raw.json` — only the *stored* fields (atomic_number, name,
-symbol, atomic_mass, mass_number, melting_point?, boiling_point?, density?,
-electronegativity?, state, discovery_year?, discoverer?, isotopes), the same fields
-`pt-domain::Element` holds, sourced from the 118 canonical YAML files in
-`periodic-table/data/elements/`. Swift's `PTDomain` computes block/period/group/category/
-class/oxidation_states/electron_configuration/computed_atomic_mass at load time.
+**Raw data (chosen): the 118 canonical YAML files** in `periodic-table/data/elements/`.
+A committed dev script (`tools/yaml-to-raw-json.mjs`) converts them into `elements.raw.json`
+containing only the *stored* fields (atomic_number, name, symbol, atomic_mass, mass_number,
+melting_point?, boiling_point?, density?, electronegativity?, state, discovery_year?,
+discoverer?, isotopes) — the same fields `pt-domain::Element` holds. Swift's `PTDomain`
+computes block/period/group/category/class/oxidation_states/electron_configuration/
+computed_atomic_mass at load time. This is the true raw source `pt-domain` itself consumes.
 
-**Fidelity guarantee**: a committed script also dumps `elements.golden.json` (the full
-*computed* output from the existing WASM, already verified to produce 118 elements with
-correct fields, e.g. Fe → group 8, period 4, block D, TransitionMetal, oxidation_states
-[2,3], computed_atomic_mass ≈ 55.845). An XCTest loads this golden file and asserts every
-Swift-computed derived field matches the WASM for all 118 elements. The app ships only
-`elements.raw.json` + `PTDomain`; the golden file is a test fixture.
+**Fidelity guarantee (dev-time only):** the Swift port is verified two ways, neither of
+which puts WASM in the app: (1) the Rust crate's own test vectors, translated into XCTest
+(primary); (2) an optional one-time golden cross-check — a committed dev script
+(`tools/dump-elements.mjs`) dumps the existing WASM's *computed* output to
+`Fixtures/elements.golden.json`, and an XCTest asserts every `PTDomain`-computed field
+matches it for all 118 elements (e.g. Fe → group 8, period 4, block D, TransitionMetal,
+oxidation_states [2,3], computed_atomic_mass ≈ 55.845). The golden file is a test fixture
+generated once on the dev machine; the app bundle ships only `elements.raw.json`.
 
 The 6 polyatomic ions are hardcoded constants (matching `src/canvas/constants.ts`):
 OH⁻, NO₃⁻, SO₄²⁻, CO₃²⁻, PO₄³⁻, NH₄⁺.
