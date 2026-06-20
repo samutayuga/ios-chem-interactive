@@ -67,6 +67,13 @@ final class LewisLayoutTests: XCTestCase {
         XCTAssertEqual(al2o3.aCount, 3)
         XCTAssertEqual(al2o3.eMoved, 3)
         XCTAssertEqual(al2o3.anionAfterDots, 8)       // min(6 + 2, 8)
+        // 1:2 ratio (distinct from the 1:1 and 2:3 cases above).
+        let mgcl2 = lewisTransfer(cation: ion("Mg", .metal, ve: 2, charge: 2),
+                                  anion: ion("Cl", .nonMetal, ve: 7, charge: -1))
+        XCTAssertEqual(mgcl2.cCount, 1)
+        XCTAssertEqual(mgcl2.aCount, 2)
+        XCTAssertEqual(mgcl2.eMoved, 2)
+        XCTAssertEqual(mgcl2.anionAfterDots, 8)       // min(7 + 1, 8)
     }
 
     func test_dotPositions_count() {
