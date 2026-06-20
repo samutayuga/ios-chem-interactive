@@ -13,8 +13,9 @@ struct ElementTokenView: View {
     private var isSelected: Bool { model.selectedToken == token }
     private var glyphColor: Color { elementClassColor(element.elementClass) }
 
+    @ViewBuilder
     var body: some View {
-        VStack(spacing: 0) {
+        let styled = VStack(spacing: 0) {
             HStack(spacing: 2) {
                 VStack(alignment: .trailing, spacing: 0) {
                     Text("\(element.massNumber)").font(.system(size: 7))
@@ -31,11 +32,17 @@ struct ElementTokenView: View {
         .overlay(RoundedRectangle(cornerRadius: 6).stroke(glyphColor.opacity(0.4), lineWidth: 1))
         .overlay(RoundedRectangle(cornerRadius: 6).stroke(.white.opacity(isSelected ? 0.8 : 0), lineWidth: 2))
         .clipShape(RoundedRectangle(cornerRadius: 6))
-        .opacity(isInactive ? 0.2 : (model.selectedToken != nil && !isSelected ? 0.5 : 1))
-        .draggable(token) { dragPreview }
-        .onTapGesture { if !isInactive { model.select(token) } }
-        .disabled(isInactive)
-        .allowsHitTesting(!isInactive)
+
+        if isInactive {
+            styled
+                .opacity(0.2)
+                .allowsHitTesting(false)
+        } else {
+            styled
+                .opacity(model.selectedToken != nil && !isSelected ? 0.5 : 1)
+                .draggable(token) { dragPreview }
+                .onTapGesture { model.select(token) }
+        }
     }
 
     private var dragPreview: some View {

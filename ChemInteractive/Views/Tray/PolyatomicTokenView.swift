@@ -10,8 +10,9 @@ struct PolyatomicTokenView: View {
     private var token: TokenTransfer { TokenTransfer(symbol: ion.symbol, isPolyatomic: true) }
     private var isSelected: Bool { model.selectedToken == token }
 
+    @ViewBuilder
     var body: some View {
-        Text(ion.formula)
+        let styled = Text(ion.formula)
             .font(.system(size: 16, weight: .bold))
             .foregroundStyle(.white)
             .frame(height: 64)
@@ -20,13 +21,19 @@ struct PolyatomicTokenView: View {
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.anion.opacity(0.4), lineWidth: 1))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(isSelected ? 0.8 : 0), lineWidth: 2))
             .clipShape(RoundedRectangle(cornerRadius: 8))
-            .opacity(disabled ? 0.2 : (model.selectedToken != nil && !isSelected ? 0.5 : 1))
-            .draggable(token) {
-                Text(ion.formula).font(.system(size: 16, weight: .bold)).foregroundStyle(.white)
-                    .padding(8).background(Theme.surface).clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-            .onTapGesture { if !disabled { model.select(token) } }
-            .disabled(disabled)
-            .allowsHitTesting(!disabled)
+
+        if disabled {
+            styled
+                .opacity(0.2)
+                .allowsHitTesting(false)
+        } else {
+            styled
+                .opacity(model.selectedToken != nil && !isSelected ? 0.5 : 1)
+                .draggable(token) {
+                    Text(ion.formula).font(.system(size: 16, weight: .bold)).foregroundStyle(.white)
+                        .padding(8).background(Theme.surface).clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .onTapGesture { model.select(token) }
+        }
     }
 }
