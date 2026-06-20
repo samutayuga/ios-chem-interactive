@@ -9,6 +9,13 @@ struct ChemInteractiveApp: App {
             ChemCanvasView()
                 .environment(model)
                 .preferredColorScheme(.dark)
+                .task {
+                    #if DEBUG
+                    if let preview = CanvasModel.debugPreviewArgument(ProcessInfo.processInfo.arguments) {
+                        model.debugSeed(preview)
+                    }
+                    #endif
+                }
         }
     }
 }

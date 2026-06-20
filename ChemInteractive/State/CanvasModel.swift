@@ -56,3 +56,34 @@ final class CanvasModel {
         selectedToken = nil
     }
 }
+
+#if DEBUG
+extension CanvasModel {
+    enum DiagramPreview: String {
+        case crossover, ionic, covalent, metallic
+    }
+
+    /// Replays real reducer actions to land in a terminal diagram state (for screenshots).
+    func debugSeed(_ which: DiagramPreview) {
+        func drop(_ symbol: String, _ slot: Slot, _ poly: Bool = false) {
+            place(TokenTransfer(symbol: symbol, isPolyatomic: poly), in: slot)
+        }
+        switch which {
+        case .crossover:
+            drop("Na", .a); drop("Cl", .b); send(.dismissExplanation)            // .animatingCrossover (auto-advances)
+        case .ionic:
+            drop("Na", .a); drop("Cl", .b); send(.dismissExplanation); send(.crossoverComplete)  // .complete
+        case .covalent:
+            drop("O", .a); drop("O", .b); send(.dismissExplanation)              // .showingCovalent
+        case .metallic:
+            drop("Na", .a); drop("Mg", .b); send(.dismissExplanation)            // .showingMetallic
+        }
+    }
+
+    /// Parses `-diagramPreview <name>` from launch arguments.
+    static func debugPreviewArgument(_ args: [String]) -> DiagramPreview? {
+        guard let i = args.firstIndex(of: "-diagramPreview"), i + 1 < args.count else { return nil }
+        return DiagramPreview(rawValue: args[i + 1])
+    }
+}
+#endif
