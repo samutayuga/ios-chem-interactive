@@ -33,6 +33,10 @@ struct BridgeView: View {
                                               anionSymbol: pair.anion.symbol, anionCharge: ac,
                                               anionIsPolyatomic: pair.anion.isPolyatomic))
                                 .font(.system(size: 22, weight: .bold)).foregroundStyle(.white)
+                            Text(ionicCompoundName(cation: pair.cation, anion: pair.anion,
+                                                   elements: model.elements, ions: model.polyatomicIons))
+                                .font(.system(size: 14)).foregroundStyle(Theme.text)
+                                .multilineTextAlignment(.center)
                         }
                         BondingDiagramView(cation: pair.cation, anion: pair.anion)
                         ResetButton { model.send(.reset) }

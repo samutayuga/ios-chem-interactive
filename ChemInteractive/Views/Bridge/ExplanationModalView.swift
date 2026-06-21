@@ -51,9 +51,7 @@ struct ExplanationModalView: View {
         }
     }
 
-    private func label(_ b: BondingType) -> String {
-        switch b { case .ionic: "Ionic Bonding"; case .covalent: "Covalent Bonding"; case .metallic: "Metallic Bonding" }
-    }
+    private func label(_ b: BondingType) -> String { bondingTitle(b) }
 
     @ViewBuilder private func slotPanel(_ zone: ZoneState, slot: ChemCore.Slot) -> some View {
         Group {
@@ -70,31 +68,7 @@ struct ExplanationModalView: View {
         .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
     }
 
-    @ViewBuilder private func summary(_ bonding: BondingType, _ a: ZoneState, _ b: ZoneState) -> some View {
-        switch bonding {
-        case .ionic:
-            let pair = ionicPair(a, b)
-            if pair.cation.status == .ionized, pair.anion.status == .ionized,
-               let cc = pair.cation.derivedCharge, let ac = pair.anion.derivedCharge {
-                let formulaStr = ionicFormula(cationSymbol: pair.cation.symbol, cationCharge: cc,
-                                              anionSymbol: pair.anion.symbol, anionCharge: ac,
-                                              anionIsPolyatomic: pair.anion.isPolyatomic)
-                let prefix: Text = Text("Crossover method: each charge becomes the other ion's subscript → ")
-                let bold: Text = Text(formulaStr).fontWeight(.bold).foregroundColor(.white)
-                let result: Text = prefix + bold
-                result
-            } else {
-                EmptyView()
-            }
-        case .covalent:
-            let aN = electronsNeeded(a.valenceElectrons), bN = electronsNeeded(b.valenceElectrons)
-            Text("\(a.symbol) needs \(aN) more electron\(aN != 1 ? "s" : "") and \(b.symbol) needs \(bN) electron\(bN != 1 ? "s" : "") — they share electrons to complete their octets.")
-        case .metallic:
-            if a.symbol == b.symbol {
-                Text("Each \(a.symbol) atom contributes \(a.valenceElectrons) valence electron\(a.valenceElectrons != 1 ? "s" : "") to a delocalised electron sea. The positive metal ions are held in a lattice by electrostatic attraction to the sea of electrons.")
-            } else {
-                Text("Each \(a.symbol) atom contributes \(a.valenceElectrons) electron\(a.valenceElectrons != 1 ? "s" : "") and each \(b.symbol) atom contributes \(b.valenceElectrons) electron\(b.valenceElectrons != 1 ? "s" : ""). The positive metal ions are held in a lattice by electrostatic attraction to the sea of electrons.")
-            }
-        }
+    private func summary(_ bonding: BondingType, _ a: ZoneState, _ b: ZoneState) -> some View {
+        Text(bondingExplanation(bonding, a, b))
     }
 }

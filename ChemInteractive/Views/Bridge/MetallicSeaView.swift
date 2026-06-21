@@ -23,7 +23,13 @@ struct MetallicSeaView: View {
         let electrons = Array(electronPool.prefix(metallicElectronsShown(slotA: slotA, slotB: slotB)))
 
         return VStack(spacing: 8) {
-            Text("METALLIC BOND").font(.system(size: 9)).tracking(2).foregroundStyle(.white.opacity(0.35))
+            BondTypeLabel(bonding: .metallic, a: slotA, b: slotB)
+            VStack(spacing: 2) {
+                Text(homo ? slotA.symbol : "\(slotA.symbol) + \(slotB.symbol)")
+                    .font(.system(size: 20, weight: .bold)).foregroundStyle(.white)
+                Text(homo ? "Pure metal · metallic bond" : "Alloy · metallic bond")
+                    .font(.system(size: 9)).tracking(1).foregroundStyle(.white.opacity(0.7))
+            }
             ZStack {
                 ForEach(Array(ionPositions.enumerated()), id: \.offset) { i, pos in
                     let idx = metallicIonIndexPattern[i]
@@ -60,14 +66,7 @@ struct MetallicSeaView: View {
                 legend(Color(hex: 0xf97316), "Positive metal ion")
                 legend(electronColor, "Delocalised e⁻")
             }
-            .font(.system(size: 8)).foregroundStyle(.white.opacity(0.5))
-
-            VStack(spacing: 2) {
-                Text(homo ? slotA.symbol : "\(slotA.symbol) + \(slotB.symbol)")
-                    .font(.system(size: 20, weight: .bold)).foregroundStyle(.white)
-                Text(homo ? "Pure metal · metallic bond" : "Alloy · metallic bond")
-                    .font(.system(size: 9)).tracking(1).foregroundStyle(.white.opacity(0.4))
-            }
+            .font(.system(size: 8)).foregroundStyle(.white.opacity(0.7))
         }
     }
 

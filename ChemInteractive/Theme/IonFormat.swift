@@ -20,6 +20,34 @@ func subscriptGlyphs(_ n: Int) -> String {
     String(String(n).map { subscriptDigits[$0] ?? $0 })
 }
 
+private let superscriptDigits: [Character: Character] = [
+    "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
+    "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
+]
+
+/// Render the electron counts in an electron-configuration string as
+/// superscripts, leaving principal quantum numbers and subshell letters as-is.
+/// e.g. "1s2 2s2 2p6 3d10" -> "1s² 2s² 2p⁶ 3d¹⁰".
+func superscriptElectronCounts(_ config: String) -> String {
+    var out = ""
+    var afterSubshell = false   // true once we've passed the s/p/d/f letter
+    for ch in config {
+        switch ch {
+        case "s", "p", "d", "f":
+            afterSubshell = true
+            out.append(ch)
+        case "0"..."9" where afterSubshell:
+            out.append(superscriptDigits[ch] ?? ch)
+        case " ":
+            afterSubshell = false
+            out.append(ch)
+        default:
+            out.append(ch)   // principal quantum number digit, etc.
+        }
+    }
+    return out
+}
+
 /// Ion label, e.g. "Na⁺", "Mg²⁺", "Cl⁻", "O²⁻".
 func formatIon(symbol: String, charge: Int) -> String {
     let abs = Swift.abs(charge)
