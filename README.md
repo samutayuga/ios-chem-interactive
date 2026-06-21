@@ -4,7 +4,10 @@ A native SwiftUI iPhone app that teaches chemical bonding interactively. Drag tw
 elements (or a polyatomic ion) together and the app classifies the bond — **ionic**,
 **covalent**, or **metallic** — explains the charge derivation, and renders an animated
 result diagram: an ionic crossover + Lewis electron‑transfer, a covalent Lewis structure,
-or a metallic electron‑sea.
+or a metallic electron‑sea. Tapping an element opens a detail card (notation, group/
+period, electron config, oxidation states) and highlights its group + period; drop
+zones are graduated cylinders whose fill animates by state of matter (solid/liquid/
+gas/aqueous); results show the compound name and a tappable bond explanation.
 
 It is a pure‑Swift port of an existing React + Rust/WASM app. **No WebAssembly, FFI, or JS
 bridge ships in the binary** — the chemistry domain logic was ported from the Rust
@@ -13,7 +16,7 @@ bridge ships in the binary** — the chemistry domain logic was ported from the 
 
 - **Platform:** iOS 17.0+, portrait iPhone.
 - **Language:** Swift 5 language mode, SwiftUI.
-- **Tests:** 96 (61 in `ChemCore`, 35 in the app), all command‑line runnable.
+- **Tests:** 61 in `ChemCore` + 64 in the app target, all command‑line runnable.
 
 ---
 
@@ -21,20 +24,14 @@ bridge ships in the binary** — the chemistry domain logic was ported from the 
 
 The system is three layers, smallest dependency first:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  ChemInteractive  (SwiftUI app target — presentation only)   │
-│    State/   Theme/   Diagrams/   Views/                      │
-│                          │ reads state, dispatches actions   │
-│                          ▼                                    │
-├─────────────────────────────────────────────────────────────┤
-│  ChemCore  (Swift package — pure, UI-free, fully tested)     │
-│    PTDomain → Data → Engine → State (reducer)                │
-│                          │ derives every chemistry value     │
-│                          ▼                                    │
-├─────────────────────────────────────────────────────────────┤
-│  elements.raw.json  (118 elements, stored fields only)       │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    A["<b>ChemInteractive</b> — SwiftUI app target (presentation only)<br/>State · Theme · Diagrams · Views"]
+    B["<b>ChemCore</b> — Swift package (pure, UI-free, fully tested)<br/>PTDomain → Data → Engine → State (reducer)"]
+    C["<b>elements.raw.json</b> — 118 elements, stored fields only"]
+
+    A -->|"reads state, dispatches actions"| B
+    B -->|"derives every chemistry value"| C
 ```
 
 **Why this split.** The chemistry is small, deterministic, and worth testing exhaustively,
@@ -52,19 +49,18 @@ synchronized groups — new source files are auto‑discovered, no `pbxproj` edi
 Arrows mean "depends on / imports". `ChemCore`'s internal layers are strictly one‑directional;
 the app never reaches past `ChemCore`'s public API.
 
-```
-            ChemInteractive (app target)
-        ┌── State ── Theme ── Diagrams ── Views ──┐
-        │          all import ChemCore            │
-        └────────────────┬────────────────────────┘
-                         │  import ChemCore
-                         ▼
-   ChemCore  ┌─────────────────────────────────────┐
-             │  State ──► Engine ──► Data ──► PTDomain│   (left depends on right)
-             └─────────────────────────────────────┘
-                         ▲
-                         │ loads at runtime
-               Resources/elements.raw.json
+```mermaid
+flowchart TD
+    subgraph App["ChemInteractive (app target)"]
+        direction LR
+        State -.- Theme -.- Diagrams -.- Views
+    end
+    subgraph Core["ChemCore (internal layers, one-directional)"]
+        direction LR
+        CState["State"] --> Engine --> Data --> PTDomain
+    end
+    App -->|"import ChemCore"| Core
+    JSON["Resources/elements.raw.json"] -->|"loads at runtime"| Core
 ```
 
 ### Unidirectional data flow (Model–View–Update)
@@ -73,19 +69,12 @@ The whole app is one loop. A view dispatches an **action**; the model runs it th
 **pure reducer**; the new **state** re‑renders the views. State only ever changes in one
 place (`canvasReducer`), so behavior is fully reproducible and testable.
 
-```
-        ┌──────────────────────────────────────────────────────────┐
-        │                                                          │
-        ▼                                                          │
-   ┌─────────┐   gesture    ┌──────────────┐   CanvasAction   ┌──────────────┐
-   │  Views  │ ───────────► │  CanvasModel │ ───────────────► │ canvasReducer│
-   │ (SwiftUI)│             │ (@Observable)│   .send(action)  │  (pure func) │
-   └─────────┘              └──────────────┘                  └──────┬───────┘
-        ▲                          ▲                                 │
-        │   @Environment reads     │      state = reducer(state, …)  │ new CanvasState
-        │   model.state            └─────────────────────────────────┘
-        └────────────────────────────────────────────────────────────
-                        SwiftUI re-renders on @Observable change
+```mermaid
+flowchart LR
+    Views["Views<br/>(SwiftUI)"] -->|"gesture → .send(action)<br/>CanvasAction"| Model["CanvasModel<br/>(@Observable)"]
+    Model -->|".send(action)"| Reducer["canvasReducer<br/>(pure func)"]
+    Reducer -->|"new CanvasState"| Model
+    Model -->|"@Environment reads model.state<br/>SwiftUI re-renders on @Observable change"| Views
 ```
 
 ### Repository layout
@@ -104,10 +93,10 @@ ios-chem-interactive/
 ├── ChemInteractive/                # the SwiftUI app (Plans 2 & 3)
 │   ├── ChemInteractiveApp.swift    # @main, injects the model
 │   ├── State/CanvasModel.swift     # @Observable wrapper over the reducer
-│   ├── Theme/                      # Theme.swift, IonFormat.swift
+│   ├── Theme/                      # Theme, IonFormat, PeriodicNaming, CompoundName
 │   ├── Diagrams/LewisLayout.swift  # pure diagram geometry (tested)
-│   └── Views/                      # Tray/, Zones/, Bridge/, ChemCanvasView
-├── ChemInteractiveTests/           # 35 XCTests for the app's pure helpers
+│   └── Views/                      # Tray/, Zones/, Bridge/, Shared/, ChemCanvasView
+├── ChemInteractiveTests/           # XCTests for the app's pure helpers
 ├── ChemInteractive.xcodeproj/      # hand-authored
 ├── tools/                          # dev-only Node scripts (data generation)
 └── docs/superpowers/{specs,plans}/ # design specs + implementation plans
@@ -179,17 +168,14 @@ The teaching logic that lives in the React app (not in Rust). All pure functions
 
 **Bond classification decision tree** (`bondingType`, evaluated on the second drop):
 
-```
-                    either side a polyatomic ion?
-                       │yes                │no
-                       ▼                   ▼
-                    IONIC          both sides metal?
-                                    │yes          │no
-                                    ▼             ▼
-                                 METALLIC   both (metalloid│nonmetal)?
-                                              │yes            │no
-                                              ▼               ▼
-                                           COVALENT         IONIC      (e.g. metal + nonmetal)
+```mermaid
+flowchart TD
+    Q1{"either side a<br/>polyatomic ion?"} -->|yes| I1["IONIC"]
+    Q1 -->|no| Q2{"both sides<br/>metal?"}
+    Q2 -->|yes| M["METALLIC"]
+    Q2 -->|no| Q3{"both metalloid<br/>or nonmetal?"}
+    Q3 -->|yes| CO["COVALENT"]
+    Q3 -->|no| I2["IONIC<br/>(e.g. metal + nonmetal)"]
 ```
 
 ### `State/` — the canvas state machine
@@ -197,6 +183,20 @@ The teaching logic that lives in the React app (not in Rust). All pure functions
 A pure value‑type reducer mirroring the React `reducer.ts`. **No reference types, no side
 effects** — the same input always yields the same output, which is what makes it
 exhaustively testable.
+
+```mermaid
+stateDiagram-v2
+    [*] --> selecting
+    selecting --> slotAFilled: first drop
+    slotAFilled --> explaining: second drop
+    explaining --> animatingCrossover: ionic
+    explaining --> showingCovalent: covalent
+    explaining --> showingMetallic: metallic
+    animatingCrossover --> complete
+    showingCovalent --> complete
+    showingMetallic --> complete
+    complete --> selecting: reset
+```
 
 | Type / function | Role | File |
 | --- | --- | --- |
@@ -244,18 +244,19 @@ maps state to SwiftUI views, and maps gestures to actions.
 
 **Dropping a token — the round trip** (drag *and* tap‑to‑place share the same path):
 
-```
-ElementTokenView                DropZoneView              CanvasModel                 ChemCore
-──────────────────────────────────────────────────────────────────────────────────────────────
-.draggable(TokenTransfer) ─────► .dropDestination ──────► place(token, in: slot)
-   (symbol, isPolyatomic)          (for: TokenTransfer)        │
-                                                               ├─ zoneState(for:) ──► ZoneState(element:)
-                                                               │                       or (polyatomic:)
-                                                               ├─ send(.dropElement) ► canvasReducer(…)
-                                                               │                          │ classify + autoIonize
-                                                               └─ clearSelection()     ◄──┘ new CanvasState
-                                                                          │
-                                                          @Observable change → DropZoneView + tray re-render
+```mermaid
+sequenceDiagram
+    participant V as ElementTokenView
+    participant D as DropZoneView
+    participant M as CanvasModel
+    participant C as ChemCore
+    V->>D: .draggable(TokenTransfer) — symbol, isPolyatomic
+    D->>M: place(token, in: slot)
+    M->>C: zoneState(for:) → ZoneState(element:) / (polyatomic:)
+    M->>C: send(.dropElement) → canvasReducer(…)
+    C-->>M: classify + autoIonize → new CanvasState
+    M->>M: clearSelection()
+    Note over D,M: @Observable change → DropZoneView + tray re-render
 ```
 
 ### Theme & formatting
@@ -275,52 +276,84 @@ ElementTokenView                DropZoneView              CanvasModel           
 (~45% height) and the workspace below (`Slot A | Bridge | Slot B` in an `HStack`), with the
 explanation modal as a full‑screen `.overlay`.
 
-```
-   ┌───────────────────────────────────────────────┐
-   │ [ Elements ] [ Polyatomic Ions ]   ● ● ● legend│   ElementTrayView
-   │ ┌──┬──┬──┬─────────────────────┬──┬──┬──┐      │     18-col × 7-row Grid
-   │ │H │  │  │   …bond-hint tints…  │  │  │He│      │     + f-block rows
-   │ ├──┼──┼──┤                     ├──┼──┼──┤      │     (~45% height)
-   │ │Li│Be│  │                     │ …│  │Ne│      │
-   │ └──┴──┴──┴─────────────────────┴──┴──┴──┘      │
-   ├───────────────────────────────────────────────┤
-   │   Slot A    │      Bridge       │    Slot B    │   workspace (HStack)
-   │  ┌───────┐  │        ⇌          │  ┌───────┐   │     DropZoneView | BridgeView | DropZoneView
-   │  │  Na⁺  │  │  [result diagram] │  │  Cl⁻  │   │
-   │  └───────┘  │   [ Reset ]       │  └───────┘   │
-   └───────────────────────────────────────────────┘
-        └─ full-screen ExplanationModalView overlays during .explaining ─┘
+```mermaid
+flowchart TB
+    subgraph Canvas["ChemCanvasView (GeometryReader)"]
+        direction TB
+        subgraph Tray["ElementTrayView — ~45% height (top)"]
+            direction TB
+            Tabs["[ Elements ] [ Polyatomic Ions ] · ●●● legend"]
+            Grid["18-col × 7-row Grid + f-block rows<br/>(bond-hint tints)"]
+        end
+        subgraph Work["Workspace — HStack (below)"]
+            direction LR
+            SlotA["DropZoneView<br/>Slot A · Na⁺"]
+            Bridge["BridgeView<br/>⇌ · result diagram · Reset"]
+            SlotB["DropZoneView<br/>Slot B · Cl⁻"]
+        end
+        Tray --> Work
+    end
+    Modal["ExplanationModalView<br/>full-screen .overlay during .explaining"] -.->|overlays| Canvas
 ```
 
 **Tray — `Views/Tray/`:**
 
-- `ElementTokenView` / `PolyatomicTokenView` — a draggable token. Both use SwiftUI
-  `.draggable(TokenTransfer)` for drag and `.onTapGesture` for tap‑to‑select. **`.draggable`
-  is attached only in the active branch** of the body, because on iOS 17 `.disabled()` /
-  `.allowsHitTesting(false)` do *not* reliably suppress a drag interaction — a disabled
-  (noble‑gas, or mid‑animation) token must be neither tappable nor draggable.
-- `ElementTrayView` — an 18‑column × 7‑period `Grid` (empty cells where no element sits),
-  with f‑block rows below, "Elements" / "Polyatomic Ions" tabs, the bonding legend, and
-  per‑token hint tints computed against the single filled slot.
+- `ElementTrayView` — the full periodic table as an 18‑column × 7‑period `Grid`
+  (empty cells where no element sits) plus f‑block rows, "Elements" / "Polyatomic
+  Ions" tabs, bonding legend, and per‑token hint tints against the single filled
+  slot. **Fit‑to‑frame**: `TrayLayout.trayCellMetrics(...)` (pure, tested) sizes
+  every cell from the available area so the whole table fits with no horizontal
+  scroll; **pinch‑zoom** (1–4×, double‑tap resets) magnifies to read small symbols.
+- `ElementTokenView` / `PolyatomicTokenView` — a tappable token. **Tapping selects
+  it** (`model.select`) *and* opens the detail card — placement is then a single
+  tap on a slot (two taps total). Drag still works from the detail card's glyph.
+  The selected element's **group column + period row highlight** in the grid
+  (accent wash + ring) while its card is open.
+- `ElementDetailCard` / `PolyatomicDetailCard` (`ElementDetailCard.swift`) — a
+  **non‑modal** popup (shared `Views/Shared/CardChrome` with `blocking: false`, so
+  a slot tap passes through to place). Shows the atom in standard notation (mass
+  super‑, atomic sub‑script), name, class, category, `Group N/Name` +
+  `Period N` (`Theme/PeriodicNaming.periodicGroupName`), electron configuration
+  (superscripted counts, wrapped to a group‑name‑driven width), and oxidation
+  states. Closing clears the selection (which auto‑dismisses the card).
 
 **Zones — `Views/Zones/`:**
 
-- `DropZoneView` — a slot. Accepts a drop via `.dropDestination(for: TokenTransfer.self)` →
-  `model.place(token, in: slot)`; a pending tap‑selection can also be placed by tapping the
-  zone. Shows the symbol (neutral) or the ion label (ionized), a drop‑over highlight, and a
-  `×` clear button that dispatches `.replaceElement`. Slot A is cation‑green, Slot B is
-  anion‑pink.
+- `DropZoneView` — a slot rendered as a **graduated measuring cylinder**
+  (`MeasuringCylinder.swift`: `MeasuringCylinderShape` + `GraduationTicks`, with a
+  static "mL" label). Accepts a drop via `.dropDestination(for: TokenTransfer.self)`
+  → `model.place(token, in: slot)`; a pending tap‑selection places by tapping the
+  zone. Empty + idle shows a droplet icon; with a pending selection it shows the
+  symbol + a `hand.tap` cue. A `×` clear button dispatches `.replaceElement`. Slot A
+  cation‑green, Slot B anion‑pink; `.contentShape`/gestures bound to the cylinder.
+- `SubstanceFill` (`SubstanceFill.swift`) — the occupied‑slot fill, animated by
+  state of matter (`resolveSubstanceState`: element `raw.state`, ions → aqueous):
+  **solid** chunk drops + settles, **liquid** rises with a wave, **gas** bubbles
+  rise (`TimelineView`+`Canvas`), **aqueous** liquid + dispersing dots. Tinted by
+  `elementClassColor`; clipped to the cylinder; restarts on element change.
 - `TransitionMetalPickerView` — a button per positive oxidation state; tapping dispatches
   `.pickTMCharge`. Rendered inline in the explanation modal when a slot is `.deducing`.
 
 **Bridge (the result column) — `Views/Bridge/`:**
 
 - `ExplanationModalView` — the per‑bond charge‑derivation modal. For ionic it shows a
-  per‑slot panel (TM picker when deducing, else the charge explanation) plus the crossover
-  summary; "Apply →" dispatches `.dismissExplanation` (disabled while any slot is deducing).
+  per‑slot panel (TM picker when deducing, else the charge explanation) plus the
+  explanation; "Apply →" dispatches `.dismissExplanation` (disabled while any slot is deducing).
+- `BondingExplanation.swift` — one shared, pure source of bond wording
+  (`bondingTitle`, `bondingExplanation`, `covalentPairSummary`), used by both the
+  modal and the result card. Ionic now states per‑ion electron transfer with the
+  oxidation‑state charges, then the criss‑cross to the formula.
+- `BondTypeLabel` + `BondingInfoCard` — the bond‑type label on each result diagram
+  ("IONIC/COVALENT/METALLIC BOND" + ⓘ) is tappable; it opens `BondingInfoCard`
+  (full‑screen via `CardChrome`) explaining the bond (covalent shows bonding/lone
+  pairs from `covalentLayout`).
+- Result **compound name** (`Theme/CompoundName.swift`): `ionicCompoundName`
+  (e.g. "Iron(III) oxide", "Ammonium chloride") and `covalentCompoundName`
+  (Greek prefixes + elision, e.g. "Carbon dioxide", "Dinitrogen tetroxide") shown
+  above each diagram.
 - `BridgeView` — the **phase router**. Shows the `⇌` glyph always and switches on
-  `state.canvasPhase` to render the right result view (see [the diagrams](#layer-3--the-result-diagrams)).
-  Reset buttons (`ResetButton.swift`) dispatch `.reset`.
+  `state.canvasPhase` to render the right result view (formula + name **above** the
+  Lewis‑dot diagram, consistently). Reset buttons (`ResetButton.swift`) dispatch `.reset`.
 
 ### Cation/anion ordering
 
@@ -338,15 +371,28 @@ When a bond completes, `BridgeView` routes to one of three animated diagrams. Al
 counts) lives in a pure, **unit‑tested** helper file; the views are thin renderers over it.
 Pixel positions and animation timing are deliberately approximate.
 
+```mermaid
+flowchart LR
+    subgraph CC["ChemCore values"]
+        Z["ZoneState"]
+        G["gcd / calcStoich"]
+        MC["metallicCount"]
+        IF["iupacFirst"]
+    end
+    subgraph LL["LewisLayout.swift — pure, unit-tested (CORRECTNESS)"]
+        CM["crossoverModel → steps, subs"]
+        LT["lewisTransfer → counts, eMoved"]
+        CL["covalentLayout → central, lone"]
+        MM["metallic* → count, pattern"]
+    end
+    CC --> LL
+    CM --> V1["CrossoverAnimatorView"]
+    LT --> V2["BondingDiagramView"]
+    CL --> V3["CovalentLewisView"]
+    MM --> V4["MetallicSeaView"]
 ```
-   ChemCore values            LewisLayout.swift (pure, tested)        SwiftUI view (renderer)
-   ───────────────            ───────────────────────────────        ───────────────────────
-   ZoneState ───────┐        ┌─ crossoverModel ─► steps, subs ─────► CrossoverAnimatorView
-   gcd / calcStoich ├──────► ├─ lewisTransfer  ─► counts, eMoved ──► BondingDiagramView
-   metallicCount    │        ├─ covalentLayout ─► central, lone ───► CovalentLewisView
-   iupacFirst       ┘        └─ metallic*      ─► count, pattern ──► MetallicSeaView
-                              (CORRECTNESS: unit-tested)             (PIXELS: approximate)
-```
+
+The views are thin renderers (PIXELS: approximate) over the tested geometry.
 
 ### `Diagrams/LewisLayout.swift` — the tested geometry spine
 
@@ -367,11 +413,12 @@ vectors (NaCl, MgCl₂, Al₂O₃, CaCO₃, Mg(OH)₂, CO₂, H₂O, N₂, Na/Mg
 **Crossover animation steps** (`crossoverModel.steps`; bracket/÷gcd frames appear only when
 relevant — e.g. Mg(OH)₂ gets brackets, CaCO₃ gets ÷gcd, NaCl gets neither):
 
-```
-   step:   isolate ──► crisscross ──► [brackets] ──► [÷gcd] ──► done
-           ~200ms       ~600ms         ~300ms        ~400ms      │
-   shows:  Na  Cl     Mg  Cl₂        Mg (OH)₂      Ca CO₃ ÷2   onComplete()
-                      (subs slide in) (anion paren) (reduce)    └─► .crossoverComplete
+```mermaid
+flowchart LR
+    A["isolate<br/>~200ms · Na Cl"] --> B["crisscross<br/>~600ms · Mg Cl₂<br/>(subs slide in)"]
+    B --> C["[brackets]<br/>~300ms · Mg(OH)₂<br/>(anion paren)"]
+    C --> D["[÷gcd]<br/>~400ms · Ca CO₃ ÷2<br/>(reduce)"]
+    D --> E["done → onComplete()<br/>.crossoverComplete"]
 ```
 
 ### The four views (`Views/Bridge/`)
@@ -389,32 +436,34 @@ relevant — e.g. Mg(OH)₂ gets brackets, CaCO₃ gets ÷gcd, NaCl gets neither
 reducer actions** (so it can't drift from production behavior):
 
 ```bash
-xcrun simctl launch booted com.cheminteractive.app --args -diagramPreview ionic|covalent|metallic|crossover
+# seed a result diagram (crossover | ionic | mgcl2 | na2o | explainIonic | covalent | co2 | metallic)
+xcrun simctl launch booted com.cheminteractive.app --args -diagramPreview mgcl2
+# open an element's detail card (any symbol) for screenshots
+xcrun simctl launch booted com.cheminteractive.app --args -detailElement Fe
 ```
 
-Implemented as a `#if DEBUG` extension on `CanvasModel` (`debugSeed(_:)`,
-`debugPreviewArgument(_:)`) invoked from a `.task` in `ChemInteractiveApp`. Compiled out of
-Release.
+`-diagramPreview` is a `#if DEBUG` extension on `CanvasModel` (`debugSeed(_:)`,
+`debugPreviewArgument(_:)`) invoked from a `.task` in `ChemInteractiveApp` —
+it replays real reducer actions so it can't drift from production. `mgcl2`/`na2o`
+exercise the ionic anion/cation coefficients; `co2` the covalent `×N` count;
+`explainIonic` stops at the explanation modal. `-detailElement` is a `#if DEBUG`
+hook in `ElementTrayView` that opens the detail card. All compiled out of Release.
 
 ---
 
 ## The phase flow, end to end
 
-```
-SELECTING
-  │ drop first token
-  ▼
-SLOT_A_FILLED
-  │ drop second token  ── reducer classifies the bond ──┐
-  ▼                                                      │
-EXPLAINING  (modal: charge derivation; TM picker if deducing)
-  │ Apply →                                              │
-  ├── ionic ───────► ANIMATING_CROSSOVER ──► COMPLETE (formula + Lewis transfer)
-  ├── covalent ────► SHOWING_COVALENT     (Lewis structure)
-  └── metallic ────► SHOWING_METALLIC     (electron sea)
-                          │ Reset
-                          ▼
-                       SELECTING
+```mermaid
+flowchart TD
+    S["SELECTING"] -->|drop first token| AF["SLOT_A_FILLED"]
+    AF -->|"drop second token — reducer classifies the bond"| EX["EXPLAINING<br/>(modal: charge derivation; TM picker if deducing)"]
+    EX -->|"Apply → ionic"| AC["ANIMATING_CROSSOVER"]
+    AC --> CMP["COMPLETE<br/>(formula + Lewis transfer)"]
+    EX -->|"Apply → covalent"| SC["SHOWING_COVALENT<br/>(Lewis structure)"]
+    EX -->|"Apply → metallic"| SM["SHOWING_METALLIC<br/>(electron sea)"]
+    CMP -->|Reset| S
+    SC -->|Reset| S
+    SM -->|Reset| S
 ```
 
 Every transition is a pure `canvasReducer` call; the views only *render* the current
