@@ -21,6 +21,13 @@ final class IonFormatTests: XCTestCase {
         XCTAssertEqual(formatIon(symbol: "O", charge: -2), "O²⁻")
     }
 
+    func test_superscriptElectronCounts() {
+        // Electron counts become superscripts; principal quantum numbers stay normal.
+        XCTAssertEqual(superscriptElectronCounts("1s2 2s2 2p6 3s1"), "1s² 2s² 2p⁶ 3s¹")
+        // Multi-digit counts (d10, f14) superscript every digit.
+        XCTAssertEqual(superscriptElectronCounts("3d10 4f14"), "3d¹⁰ 4f¹⁴")
+    }
+
     func test_electronsNeeded() {
         XCTAssertEqual(electronsNeeded(1), 1)   // H
         XCTAssertEqual(electronsNeeded(6), 2)   // O

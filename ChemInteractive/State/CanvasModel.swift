@@ -60,7 +60,7 @@ final class CanvasModel {
 #if DEBUG
 extension CanvasModel {
     enum DiagramPreview: String {
-        case crossover, ionic, covalent, metallic
+        case crossover, ionic, mgcl2, na2o, explainIonic, covalent, co2, metallic
     }
 
     /// Replays real reducer actions to land in a terminal diagram state (for screenshots).
@@ -72,9 +72,17 @@ extension CanvasModel {
         case .crossover:
             drop("Na", .a); drop("Cl", .b); send(.dismissExplanation)            // .animatingCrossover (auto-advances)
         case .ionic:
-            drop("Na", .a); drop("Cl", .b); send(.dismissExplanation); send(.crossoverComplete)  // .complete
+            drop("Na", .a); drop("Cl", .b); send(.dismissExplanation); send(.crossoverComplete)  // .complete (NaCl 1:1)
+        case .mgcl2:
+            drop("Mg", .a); drop("Cl", .b); send(.dismissExplanation); send(.crossoverComplete)  // .complete (MgCl₂, anion coeff 2)
+        case .na2o:
+            drop("Na", .a); drop("O", .b); send(.dismissExplanation); send(.crossoverComplete)    // .complete (Na₂O, cation coeff 2)
+        case .explainIonic:
+            drop("Mg", .a); drop("Cl", .b)                                                          // .explaining (ionic explanation modal)
         case .covalent:
-            drop("O", .a); drop("O", .b); send(.dismissExplanation)              // .showingCovalent
+            drop("O", .a); drop("O", .b); send(.dismissExplanation)              // .showingCovalent (O₂)
+        case .co2:
+            drop("C", .a); drop("O", .b); send(.dismissExplanation)              // .showingCovalent (CO₂, 2 peripheral O)
         case .metallic:
             drop("Na", .a); drop("Mg", .b); send(.dismissExplanation)            // .showingMetallic
         }

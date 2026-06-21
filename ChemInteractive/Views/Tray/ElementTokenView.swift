@@ -5,6 +5,10 @@ struct ElementTokenView: View {
     let element: Element
     var hint: BondHintKind?
     var disabled: Bool = false
+    var metrics: TrayCellMetrics
+    var onTap: (Element) -> Void
+    var axisHighlighted: Bool = false
+    var focused: Bool = false
 
     @Environment(CanvasModel.self) private var model
 
@@ -17,20 +21,29 @@ struct ElementTokenView: View {
     var body: some View {
         let styled = VStack(spacing: 0) {
             HStack(spacing: 2) {
-                VStack(alignment: .trailing, spacing: 0) {
-                    Text("\(element.massNumber)").font(.system(size: 7))
-                    Text("\(element.atomicNumber)").font(.system(size: 7))
+                if metrics.showCornerNumbers {
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text("\(element.massNumber)").font(.system(size: metrics.cornerFont))
+                        Text("\(element.atomicNumber)").font(.system(size: metrics.cornerFont))
+                    }
+                    .foregroundStyle(Theme.text.opacity(0.65))
                 }
-                .foregroundStyle(Theme.text.opacity(0.65))
                 Text(element.symbol)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: metrics.symbolFont, weight: .bold))
                     .foregroundStyle(glyphColor)
             }
         }
-        .frame(width: 38, height: 38)
-        .background((hint?.tint) ?? Theme.surface)
+        .frame(width: metrics.cell, height: metrics.cell)
+        .background {
+            ZStack {
+                (hint?.tint) ?? Theme.surface
+                if axisHighlighted { Theme.accent.opacity(0.45) }
+            }
+        }
         .overlay(RoundedRectangle(cornerRadius: 6).stroke(glyphColor.opacity(0.4), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.accent.opacity(axisHighlighted ? 0.7 : 0), lineWidth: 1.5))
         .overlay(RoundedRectangle(cornerRadius: 6).stroke(.white.opacity(isSelected ? 0.8 : 0), lineWidth: 2))
+        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.accent.opacity(focused ? 1 : 0), lineWidth: 2.5))
         .clipShape(RoundedRectangle(cornerRadius: 6))
 
         if isInactive {
@@ -40,17 +53,7 @@ struct ElementTokenView: View {
         } else {
             styled
                 .opacity(model.selectedToken != nil && !isSelected ? 0.5 : 1)
-                .draggable(token) { dragPreview }
-                .onTapGesture { model.select(token) }
+                .onTapGesture { onTap(element) }
         }
-    }
-
-    private var dragPreview: some View {
-        Text(element.symbol)
-            .font(.system(size: 16, weight: .bold))
-            .foregroundStyle(glyphColor)
-            .padding(8)
-            .background(Theme.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 }

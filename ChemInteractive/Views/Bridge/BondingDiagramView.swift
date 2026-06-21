@@ -56,31 +56,33 @@ struct BondingDiagramView: View {
     }
 
     @ViewBuilder private func coeff(_ n: Int, _ color: Color) -> some View {
-        if n > 1 { Text("\(n)").font(.system(size: 14, weight: .bold)).foregroundStyle(color) }
+        // .fixedSize so the coefficient is never compressed to zero width in the
+        // narrow (~1/3-screen) result column.
+        if n > 1 { Text("\(n)").font(.system(size: 14, weight: .bold)).foregroundStyle(color).fixedSize() }
     }
 
     private func lewisTransferView(_ cat: ZoneState, _ an: ZoneState) -> some View {
         let t = lewisTransfer(cation: cat, anion: an)
         return VStack(spacing: 6) {
-            Text("BEFORE").font(.system(size: 8)).tracking(2).foregroundStyle(.white.opacity(0.35))
+            Text("BEFORE").font(.system(size: 8)).tracking(2).foregroundStyle(.white.opacity(0.6))
             HStack(spacing: 4) {
                 AtomCircleView(symbol: cat.symbol, dots: cat.valenceElectrons, color: Theme.cation)
-                Text("+").font(.system(size: 12)).foregroundStyle(.white.opacity(0.7))
+                Text("+").font(.system(size: 12)).foregroundStyle(.white.opacity(0.85)).fixedSize()
                 AtomCircleView(symbol: an.symbol, dots: an.valenceElectrons, color: Theme.anion)
             }
             HStack(spacing: 4) {
                 Text("\(t.eMoved)e⁻").font(.system(size: 9)).foregroundStyle(Theme.cation.opacity(0.7))
-                Text("→").font(.system(size: 16)).foregroundStyle(.white.opacity(0.75))
+                Text("→").font(.system(size: 16)).foregroundStyle(.white.opacity(0.85))
             }
-            Text("AFTER").font(.system(size: 8)).tracking(2).foregroundStyle(.white.opacity(0.35))
+            Text("AFTER").font(.system(size: 8)).tracking(2).foregroundStyle(.white.opacity(0.6))
             HStack(spacing: 4) {
                 coeff(t.cCount, Theme.cation)
                 AtomCircleView(symbol: cat.symbol, dots: 0, charge: cat.derivedCharge, color: Theme.cation)
-                Text("+").font(.system(size: 12)).foregroundStyle(.white.opacity(0.7))
+                Text("+").font(.system(size: 12)).foregroundStyle(.white.opacity(0.85)).fixedSize()
                 coeff(t.aCount, Theme.anion)
                 AtomCircleView(symbol: an.symbol, dots: t.anionAfterDots, charge: an.derivedCharge, bracketed: true, color: Theme.anion)
             }
-            Text("IONIC BOND").font(.system(size: 9, weight: .semibold)).tracking(2).foregroundStyle(.white.opacity(0.45))
+            BondTypeLabel(bonding: .ionic, a: cat, b: an)
         }
     }
 
@@ -92,11 +94,11 @@ struct BondingDiagramView: View {
             HStack(spacing: 8) {
                 coeff(cCount, Theme.cation)
                 AtomCircleView(symbol: cat.symbol, dots: 0, charge: cat.derivedCharge, color: Theme.cation)
-                Text("↔").font(.system(size: 18)).foregroundStyle(.white.opacity(0.75))
+                Text("↔").font(.system(size: 18)).foregroundStyle(.white.opacity(0.85)).fixedSize()
                 coeff(aCount, Theme.anion)
                 AtomCircleView(symbol: an.symbol, dots: 0, charge: an.derivedCharge, bracketed: true, color: Theme.anion)
             }
-            Text("IONIC BOND").font(.system(size: 9, weight: .semibold)).tracking(2).foregroundStyle(.white.opacity(0.45))
+            BondTypeLabel(bonding: .ionic, a: cat, b: an)
         }
     }
 }

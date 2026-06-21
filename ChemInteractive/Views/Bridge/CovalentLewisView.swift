@@ -4,6 +4,7 @@ import ChemCore
 struct CovalentLewisView: View {
     let slotA: ZoneState
     let slotB: ZoneState
+    @Environment(CanvasModel.self) private var model
 
     private let lpColor = Color(hex: 0xc8d2ff)
     private let canvas = CGSize(width: 280, height: 220)
@@ -23,7 +24,8 @@ struct CovalentLewisView: View {
         let centralBondAngles = positions.map { atan2(Double($0.y - center.y), Double($0.x - center.x)) }
 
         return VStack(spacing: 8) {
-            Text("COVALENT BOND").font(.system(size: 9)).tracking(2).foregroundStyle(.white.opacity(0.35))
+            BondTypeLabel(bonding: .covalent, a: slotA, b: slotB)
+            formula(layout.bondOrder)
             ZStack {
                 ForEach(Array(positions.enumerated()), id: \.offset) { _, p in
                     bond(from: center, to: p)
@@ -41,18 +43,17 @@ struct CovalentLewisView: View {
                 ForEach(Array(lonePairAngles(bondAngles: centralBondAngles, count: layout.centralLone).enumerated()), id: \.offset) { _, a in
                     lonePair(at: center, angle: a, r: rC)
                 }
-                if layout.nPeripheral > 4 {
-                    Text("×\(layout.nPeripheral)").font(.system(size: 9)).foregroundStyle(.white.opacity(0.4))
+                if layout.nPeripheral > 1 {
+                    Text("×\(layout.nPeripheral)").font(.system(size: 9)).foregroundStyle(.white.opacity(0.7))
                         .position(x: canvas.width - 18, y: 14)
                 }
             }
             .frame(width: canvas.width, height: canvas.height)
-            formula(layout.bondOrder)
         }
     }
 
     private func bond(from a: CGPoint, to b: CGPoint) -> some View {
-        Path { p in p.move(to: a); p.addLine(to: b) }.stroke(.white.opacity(0.25), lineWidth: 1)
+        Path { p in p.move(to: a); p.addLine(to: b) }.stroke(.white.opacity(0.4), lineWidth: 1)
     }
 
     @ViewBuilder
@@ -104,8 +105,11 @@ struct CovalentLewisView: View {
         let label = bondOrder == 1 ? "Single" : bondOrder == 2 ? "Double" : "Triple"
         return VStack(spacing: 2) {
             Text(text).font(.system(size: 20, weight: .bold)).foregroundStyle(.white)
+            Text(covalentCompoundName(slotA: slotA, slotB: slotB, elements: model.elements))
+                .font(.system(size: 14)).foregroundStyle(Theme.text)
+                .multilineTextAlignment(.center)
             Text("\(label) covalent bond · \(bondOrder) shared pair\(bondOrder > 1 ? "s" : "") per bond")
-                .font(.system(size: 9)).tracking(1).foregroundStyle(.white.opacity(0.4)).multilineTextAlignment(.center)
+                .font(.system(size: 9)).tracking(1).foregroundStyle(.white.opacity(0.7)).multilineTextAlignment(.center)
         }
     }
 }
@@ -119,4 +123,5 @@ struct CovalentLewisView: View {
     )
     .padding(20)
     .background(Theme.bg)
+    .environment(CanvasModel())
 }

@@ -4,6 +4,7 @@ import ChemCore
 struct PolyatomicTokenView: View {
     let ion: PolyatomicIon
     var disabled: Bool = false
+    var onTap: (PolyatomicIon) -> Void
 
     @Environment(CanvasModel.self) private var model
 
@@ -29,11 +30,7 @@ struct PolyatomicTokenView: View {
         } else {
             styled
                 .opacity(model.selectedToken != nil && !isSelected ? 0.5 : 1)
-                .draggable(token) {
-                    Text(ion.formula).font(.system(size: 16, weight: .bold)).foregroundStyle(.white)
-                        .padding(8).background(Theme.surface).clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-                .onTapGesture { model.select(token) }
+                .onTapGesture { onTap(ion) }
         }
     }
 }
