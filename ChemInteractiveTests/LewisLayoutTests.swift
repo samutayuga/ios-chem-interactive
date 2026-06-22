@@ -85,9 +85,10 @@ final class LewisLayoutTests: XCTestCase {
 }
 
 final class CovalentMetallicLayoutTests: XCTestCase {
-    private func atom(_ symbol: String, ve: Int) -> ZoneState {
+    private func atom(_ symbol: String, ve: Int, group: Int = 0, period: Int = 0) -> ZoneState {
         ZoneState(symbol: symbol, elementClass: .nonMetal, isPolyatomic: false, isTransition: false,
-                  valenceElectrons: ve, oxidationStates: [], derivedCharge: nil, status: .neutral)
+                  valenceElectrons: ve, oxidationStates: [], derivedCharge: nil, status: .neutral,
+                  group: group, period: period)
     }
     private func metal(_ symbol: String, ve: Int) -> ZoneState {
         ZoneState(symbol: symbol, elementClass: .metal, isPolyatomic: false, isTransition: false,
@@ -118,6 +119,16 @@ final class CovalentMetallicLayoutTests: XCTestCase {
         XCTAssertEqual(l.bondOrder, 3)
         XCTAssertEqual(l.centralLone, 1)
         XCTAssertEqual(l.peripheralLone, 1)
+    }
+
+    func test_covalent_SO2_orbitalMismatch() {
+        let l = covalentLayout(slotA: atom("S", ve: 6, group: 16, period: 3),
+                               slotB: atom("O", ve: 6, group: 16, period: 2))
+        XCTAssertTrue(l.centralIsA)            // S is central
+        XCTAssertEqual(l.nPeripheral, 2)       // 2 O
+        XCTAssertEqual(l.bondOrder, 2)         // double bonds
+        XCTAssertEqual(l.centralLone, 1)       // S: (6 − 2·2)/2
+        XCTAssertEqual(l.peripheralLone, 2)    // each O: (6 − 2)/2
     }
 
     func test_peripheralPositions_counts() {

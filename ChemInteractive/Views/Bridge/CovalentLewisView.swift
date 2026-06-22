@@ -92,7 +92,8 @@ struct CovalentLewisView: View {
     }
 
     private func formula(_ bondOrder: Int) -> some View {
-        let s = calcStoich(veA: slotA.valenceElectrons, veB: slotB.valenceElectrons)
+        let s = covalentStoich(veA: slotA.valenceElectrons, groupA: slotA.group, periodA: slotA.period,
+                               veB: slotB.valenceElectrons, groupB: slotB.group, periodB: slotB.period)
         let homo = slotA.symbol == slotB.symbol
         let aFirst = iupacFirst(slotA.symbol, slotB.symbol)
         let fst = aFirst ? slotA.symbol : slotB.symbol

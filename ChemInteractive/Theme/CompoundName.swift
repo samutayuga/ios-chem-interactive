@@ -75,7 +75,8 @@ func covalentName(firstSymbol: String, firstCount: Int,
 
 func covalentCompoundName(slotA: ZoneState, slotB: ZoneState, elements: [Element]) -> String {
     if slotA.symbol == slotB.symbol { return elementName(slotA.symbol, elements) }
-    let s = calcStoich(veA: slotA.valenceElectrons, veB: slotB.valenceElectrons)
+    let s = covalentStoich(veA: slotA.valenceElectrons, groupA: slotA.group, periodA: slotA.period,
+                           veB: slotB.valenceElectrons, groupB: slotB.group, periodB: slotB.period)
     let aFirst = iupacFirst(slotA.symbol, slotB.symbol)
     return covalentName(firstSymbol: aFirst ? slotA.symbol : slotB.symbol,
                         firstCount: aFirst ? s.nA : s.nB,
