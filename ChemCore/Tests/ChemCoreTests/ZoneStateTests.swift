@@ -34,4 +34,18 @@ final class ZoneStateTests: XCTestCase {
         XCTAssertEqual(zone.elementClass, .nonMetal)
         XCTAssertEqual(zone.valenceElectrons, 0)
     }
+    func test_zoneFromElement_carriesGroupAndPeriod() throws {
+        let pt = try PeriodicTable.load()
+        let s = try XCTUnwrap(pt.bySymbol("S"))
+        let zone = ZoneState(element: s)
+        XCTAssertEqual(zone.group, 16)
+        XCTAssertEqual(zone.period, 3)
+    }
+    func test_zoneFromElement_oxygen_period2() throws {
+        let pt = try PeriodicTable.load()
+        let o = try XCTUnwrap(pt.bySymbol("O"))
+        let zone = ZoneState(element: o)
+        XCTAssertEqual(zone.group, 16)
+        XCTAssertEqual(zone.period, 2)
+    }
 }
