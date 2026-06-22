@@ -16,7 +16,7 @@ bridge ships in the binary** — the chemistry domain logic was ported from the 
 
 - **Platform:** iOS 17.0+, portrait iPhone.
 - **Language:** Swift 5 language mode, SwiftUI.
-- **Tests:** 61 in `ChemCore` + 64 in the app target, all command‑line runnable.
+- **Tests:** 71 in `ChemCore` + 68 in the app target, all command‑line runnable.
 
 ---
 
@@ -89,7 +89,7 @@ ios-chem-interactive/
 │   │   ├── Engine/                 # bonding pedagogy (valence, stoich, metallic, gcd)
 │   │   ├── State/                  # the canvas state machine (pure reducer)
 │   │   └── Resources/elements.raw.json
-│   └── Tests/ChemCoreTests/        # 61 XCTests incl. golden WASM-fidelity check
+│   └── Tests/ChemCoreTests/        # 71 XCTests incl. golden WASM-fidelity check
 ├── ChemInteractive/                # the SwiftUI app (Plans 2 & 3)
 │   ├── ChemInteractiveApp.swift    # @main, injects the model
 │   ├── State/CanvasModel.swift     # @Observable wrapper over the reducer
@@ -162,9 +162,19 @@ The teaching logic that lives in the React app (not in Rust). All pure functions
 | --- | --- | --- |
 | Valence electrons | `parseValenceElectrons(config:group:)` strips a noble‑gas prefix, sums the electrons in the highest principal shell (with a group‑based fallback) | `Engine/Valence.swift` |
 | Bond classification | `determineBonding(_:_:)` + `bondingType(…)` (see decision tree below) | `Engine/Bonding.swift` |
-| Covalent stoichiometry | `calcStoich(veA:veB:) -> (nA, nB, bondOrder)` from octet/duet bonds‑needed and their gcd; `iupacFirst(_:_:)` orders binary formulas by electronegativity | `Engine/CovalentStoich.swift` |
+| Covalent stoichiometry | `calcStoich(veA:veB:) -> (nA, nB, bondOrder)` from octet/duet bonds‑needed and their gcd; `covalentStoich(veA:groupA:periodA:veB:groupB:periodB:)` wraps it with the **orbital‑mismatch rule** (below); `isOrbitalMismatchDoubleBond(…)` is the rule predicate; `iupacFirst(_:_:)` orders binary formulas by electronegativity | `Engine/CovalentStoich.swift` |
 | Metallic count | `metallicElectronCount(veA:veB:poolSize:)` = `min(3·veA + 3·veB, 12)` delocalised electrons | `Engine/Metallic.swift` |
 | Math | `gcd(_:_:)` (Euclidean) | `Engine/MathUtil.swift` |
+
+**Orbital‑mismatch double‑bond rule** (`covalentStoich` / `isOrbitalMismatchDoubleBond`). Two
+non‑metals of the **same group but different periods** that the octet rule would pair as a
+**1:1 double bond** instead resolve to a one‑central + two‑peripheral XO₂ structure — their
+orbitals differ in size and can't overlap efficiently for a simple double bond, so the larger
+atom (higher period) goes central with two of the smaller atom around it. The "1:1 double
+bond" trigger is only satisfiable by valence‑6 (Group 16) atoms, so the rule fires for e.g.
+**S + O → SO₂** (S central, ×2 O) and **Se + S → SeS₂** but is automatically off for halogens
+(single bond), Group 15 (triple), same‑period pairs like O₂, and different‑group pairs like
+CO₂ — no hard‑coded group check. Off‑rule cases fall straight through to `calcStoich`.
 
 **Bond classification decision tree** (`bondingType`, evaluated on the second drop):
 
@@ -203,7 +213,7 @@ stateDiagram-v2
 | `CanvasPhase` | `selecting → slotAFilled → explaining → animatingCrossover / showingCovalent / showingMetallic → complete` | `State/Phase.swift` |
 | `Slot` | `.a` / `.b`, with `.other` | `State/Phase.swift` |
 | `ZoneStatus` | `.neutral` / `.deducing` / `.ionized` | `State/Phase.swift` |
-| `ZoneState` | a filled slot: symbol, `elementClass`, `isPolyatomic`, `isTransition`, `valenceElectrons`, `oxidationStates`, `derivedCharge`, `status`. Built from an `Element` or a `PolyatomicIon` | `State/ZoneState.swift` |
+| `ZoneState` | a filled slot: symbol, `elementClass`, `isPolyatomic`, `isTransition`, `valenceElectrons`, `oxidationStates`, `derivedCharge`, `status`, `group`, `period`. Built from an `Element` (carries `group`/`period`) or a `PolyatomicIon` (`group`/`period` default `0`). `group`/`period` feed the covalent orbital‑mismatch rule | `State/ZoneState.swift` |
 | `PolyatomicIon` | the 6 hard‑coded ions (OH⁻, NO₃⁻, SO₄²⁻, CO₃²⁻, PO₄³⁻, NH₄⁺) | `State/PolyatomicIon.swift` |
 | `CanvasState` | `{ canvasPhase, bondingType?, slotA?, slotB? }`, plus `.initial` | `State/CanvasState.swift` |
 | `CanvasAction` | `dropElement(slot:zone:)`, `pickTMCharge(slot:charge:)`, `dismissExplanation`, `replaceElement(slot:)`, `crossoverComplete`, `reset` | `State/CanvasState.swift` |
@@ -340,9 +350,11 @@ flowchart TB
   per‑slot panel (TM picker when deducing, else the charge explanation) plus the
   explanation; "Apply →" dispatches `.dismissExplanation` (disabled while any slot is deducing).
 - `BondingExplanation.swift` — one shared, pure source of bond wording
-  (`bondingTitle`, `bondingExplanation`, `covalentPairSummary`), used by both the
-  modal and the result card. Ionic now states per‑ion electron transfer with the
-  oxidation‑state charges, then the criss‑cross to the formula.
+  (`bondingTitle`, `bondingExplanation`, `covalentPairSummary`, `orbitalMismatchNote`),
+  used by both the modal and the result card. Ionic states per‑ion electron transfer
+  with the oxidation‑state charges, then the criss‑cross to the formula. Covalent appends
+  `orbitalMismatchNote` — a same‑group/different‑period sentence (e.g. for SO₂) — when the
+  orbital‑mismatch rule fires, else `""`.
 - `BondTypeLabel` + `BondingInfoCard` — the bond‑type label on each result diagram
   ("IONIC/COVALENT/METALLIC BOND" + ⓘ) is tappable; it opens `BondingInfoCard`
   (full‑screen via `CardChrome`) explaining the bond (covalent shows bonding/lone
@@ -402,13 +414,13 @@ The views are thin renderers (PIXELS: approximate) over the tested geometry.
 | `crossoverModel(cation:anion:)` | reduced subscripts, `showBrackets`/`showGcd`, and the **ordered animation steps** (`isolate → crisscross → [brackets] → [÷gcd] → done`) | `CrossoverAnimatorView` |
 | `lewisTransfer(cation:anion:)` | `cCount`, `aCount`, `eMoved`, `anionAfterDots` (capped at 8) | `BondingDiagramView` |
 | `dotPositions(_ n:)` | the 8‑slot Lewis dot ring (first `min(n,8)`) | atom rendering |
-| `covalentLayout(slotA:slotB:)` | `centralIsA`, `nPeripheral`, `bondOrder`, `centralLone`, `peripheralLone` (central = smaller count; lone pairs from `(ve − bondOrder·n)/2`) | `CovalentLewisView` |
+| `covalentLayout(slotA:slotB:)` | `centralIsA`, `nPeripheral`, `bondOrder`, `centralLone`, `peripheralLone` via `covalentStoich` (central = smaller count, or the larger‑period atom when the orbital‑mismatch rule fires; lone pairs from `(ve − bondOrder·n)/2`) | `CovalentLewisView` |
 | `peripheralPositions(_:center:distance:)` | atom centres for 1–4 peripherals (5+ collapses to one + an `×N` badge) | `CovalentLewisView` |
 | `lonePairAngles(bondAngles:count:)` | `count` of the 8 cardinal/diagonal directions farthest from the bonds | `CovalentLewisView` |
 | `metallicIonIndexPattern` / `metallicElectronsShown(_:_:)` | the `[0,1,0,1,0,1]` A/B lattice pattern and the delocalised‑electron count | `MetallicSeaView` |
 
 Each of these is exercised by `ChemInteractiveTests/LewisLayoutTests.swift` with named
-vectors (NaCl, MgCl₂, Al₂O₃, CaCO₃, Mg(OH)₂, CO₂, H₂O, N₂, Na/Mg/Al metallic).
+vectors (NaCl, MgCl₂, Al₂O₃, CaCO₃, Mg(OH)₂, CO₂, SO₂, H₂O, N₂, Na/Mg/Al metallic).
 
 **Crossover animation steps** (`crossoverModel.steps`; bracket/÷gcd frames appear only when
 relevant — e.g. Mg(OH)₂ gets brackets, CaCO₃ gets ÷gcd, NaCl gets neither):
@@ -427,7 +439,7 @@ flowchart LR
 | --- | --- | --- |
 | `.animatingCrossover` | `CrossoverAnimatorView` | Renders the two symbols with subscripts that animate in. A `.task` steps an index through `crossoverModel.steps` with `withAnimation` and `Task.sleep`; brackets fade in, a `÷g` badge flashes. **Calls `onComplete()` (→ `.crossoverComplete`) unconditionally at the end** so the machine can never softlock. A defensive `else` in `BridgeView` advances the phase even in the impossible nil‑slot case. |
 | `.complete` (ionic) | formula text + `BondingDiagramView` | Lewis electron‑transfer for two regular elements (Before: atoms with valence dots; an `Ne⁻ →` arrow; After: charged ions with coefficients and the anion's filled, bracketed octet). Falls back to a simpler charged‑ion view if either is polyatomic. Composed `Circle`/`Text`/`offset` — `AtomCircleView`. |
-| `.showingCovalent` | `CovalentLewisView` | All atoms, bonds (`Path`), shared‑pair dots, and lone‑pair dots are positioned with `.position(…)` inside **one** 280×220 `ZStack` (helpers return bare `Group`s so every position resolves in the same coordinate space). Formula ordered by `iupacFirst`. |
+| `.showingCovalent` | `CovalentLewisView` | All atoms, bonds (`Path`), shared‑pair dots, and lone‑pair dots are positioned with `.position(…)` inside **one** 280×220 `ZStack` (helpers return bare `Group`s so every position resolves in the same coordinate space). Formula ordered by `iupacFirst`. Under the compound name a caption appears **only** when the orbital‑mismatch rule fires (two Group‑16, different‑period atoms) — e.g. "Group 16 orbital mismatch · S central, two O"; otherwise no caption. |
 | `.showingMetallic` | `MetallicSeaView` | A 3×2 orange cation lattice; the delocalised electrons drift continuously via **`TimelineView(.animation)` + `Canvas`**, each electron on a smooth periodic path with a per‑electron phase offset. |
 
 ### Debug preview
@@ -475,9 +487,10 @@ Every transition is a pure `canvasReducer` call; the views only *render* the cur
 
 | Suite | Count | What it proves |
 | --- | --- | --- |
-| `ChemCore` PTDomain/Engine/State | 61 | electron configuration (incl. anomalies), block/period/group/category/class/oxidation states, atomic mass, every reducer transition, valence/bonding/stoich/metallic math |
+| `ChemCore` PTDomain/Engine/State | 71 | electron configuration (incl. anomalies), block/period/group/category/class/oxidation states, atomic mass, every reducer transition, valence/bonding/stoich/metallic math, the covalent orbital‑mismatch rule (SO₂/SeS₂ + ClF/NP/O₂/CO₂ negatives), ZoneState group/period |
 | **Golden fidelity** (`GoldenFidelityTests`) | — | for **all 118 elements**, every Swift‑computed derived field matches the original WASM's output (`elements.golden.json`, generated once by `tools/dump-elements.mjs`) |
-| App `LewisLayoutTests` | 13 | the diagram geometry counts (crossover subscripts/steps, Lewis transfer counts, covalent central/lone‑pair counts, metallic count/pattern) |
+| App `LewisLayoutTests` | 14 | the diagram geometry counts (crossover subscripts/steps, Lewis transfer counts, covalent central/lone‑pair counts incl. the SO₂ orbital‑mismatch layout, metallic count/pattern) |
+| App `CompoundNameTests`, `BondingExplanationTests` | — | covalent compound naming + bond wording, incl. the SO₂ orbital‑mismatch name ("Sulfur dioxide") and explanation sentence |
 | App `CanvasModelTests`, `ThemeTests`, `IonFormatTests`, `SmokeTests` | 22 | the model round‑trips actions through the reducer; exact theme hex values + bond‑hint logic; ion formatting strings; ChemCore links and bundled data loads |
 
 **What is *not* unit‑tested:** the SwiftUI views' pixels and animation. Those are verified by

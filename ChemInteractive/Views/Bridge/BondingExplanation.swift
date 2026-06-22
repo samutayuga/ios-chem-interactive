@@ -29,7 +29,7 @@ func bondingExplanation(_ bonding: BondingType, _ a: ZoneState, _ b: ZoneState) 
     case .covalent:
         let aN = electronsNeeded(a.valenceElectrons), bN = electronsNeeded(b.valenceElectrons)
         let share = "\(a.symbol) needs \(aN) more electron\(aN != 1 ? "s" : "") and \(b.symbol) needs \(bN) electron\(bN != 1 ? "s" : "") — they share electrons to complete their octets."
-        return share + " " + covalentPairSummary(a, b)
+        return share + " " + covalentPairSummary(a, b) + orbitalMismatchNote(a, b)
     case .metallic:
         if a.symbol == b.symbol {
             return "Each \(a.symbol) atom contributes \(a.valenceElectrons) valence electron\(a.valenceElectrons != 1 ? "s" : "") to a delocalised electron sea. The positive metal ions are held in a lattice by electrostatic attraction to the sea of electrons."
@@ -37,6 +37,20 @@ func bondingExplanation(_ bonding: BondingType, _ a: ZoneState, _ b: ZoneState) 
             return "Each \(a.symbol) atom contributes \(a.valenceElectrons) electron\(a.valenceElectrons != 1 ? "s" : "") and each \(b.symbol) atom contributes \(b.valenceElectrons) electron\(b.valenceElectrons != 1 ? "s" : ""). The positive metal ions are held in a lattice by electrostatic attraction to the sea of electrons."
         }
     }
+}
+
+/// Orbital-size-mismatch note appended to a covalent explanation when the
+/// "double-bond rule" applies (same group, different period, octet 1:1 double bond).
+/// Returns "" otherwise.
+func orbitalMismatchNote(_ a: ZoneState, _ b: ZoneState) -> String {
+    guard isOrbitalMismatchDoubleBond(groupA: a.group, periodA: a.period, veA: a.valenceElectrons,
+                                      groupB: b.group, periodB: b.period, veB: b.valenceElectrons)
+    else { return "" }
+    let larger = a.period > b.period ? a : b
+    let smaller = a.period > b.period ? b : a
+    return " \(larger.symbol) and \(smaller.symbol) are both Group \(larger.group) but in different periods, "
+        + "so their orbitals differ in size and can't overlap efficiently for a simple 1:1 double bond — "
+        + "\(larger.symbol) (larger, period \(larger.period)) instead bonds to two \(smaller.symbol) atoms."
 }
 
 /// Bonding/lone-pair counts for a covalent pair, derived from `covalentLayout`.

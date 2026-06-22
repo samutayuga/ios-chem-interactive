@@ -4,10 +4,11 @@ import ChemCore
 
 final class BondingExplanationTests: XCTestCase {
     private func z(_ symbol: String, _ cls: ElementClass, ve: Int, charge: Int? = nil,
-                   status: ZoneStatus = .neutral, poly: Bool = false) -> ZoneState {
+                   status: ZoneStatus = .neutral, poly: Bool = false,
+                   group: Int = 0, period: Int = 0) -> ZoneState {
         ZoneState(symbol: symbol, elementClass: cls, isPolyatomic: poly, isTransition: false,
                   valenceElectrons: ve, oxidationStates: charge.map { [$0] } ?? [],
-                  derivedCharge: charge, status: status)
+                  derivedCharge: charge, status: status, group: group, period: period)
     }
 
     func test_ionicExplanation_containsCrossoverFormula() {
@@ -38,5 +39,20 @@ final class BondingExplanationTests: XCTestCase {
         let text = bondingExplanation(.covalent, c, o)
         XCTAssertTrue(text.contains("share"), text)
         XCTAssertTrue(text.contains("bond"), text)
+    }
+
+    func test_covalentExplanation_orbitalMismatchNote_SO2() {
+        let s = z("S", .nonMetal, ve: 6, group: 16, period: 3)
+        let o = z("O", .nonMetal, ve: 6, group: 16, period: 2)
+        let text = bondingExplanation(.covalent, s, o)
+        XCTAssertTrue(text.contains("Group 16"), text)
+        XCTAssertTrue(text.contains("different periods"), text)
+        XCTAssertTrue(text.contains("two O atoms"), text)
+    }
+    func test_covalentExplanation_noNote_whenRuleOff() {
+        let c = z("C", .nonMetal, ve: 4, group: 14, period: 2)
+        let o = z("O", .nonMetal, ve: 6, group: 16, period: 2)
+        let text = bondingExplanation(.covalent, c, o)
+        XCTAssertFalse(text.contains("orbitals differ"), text)
     }
 }

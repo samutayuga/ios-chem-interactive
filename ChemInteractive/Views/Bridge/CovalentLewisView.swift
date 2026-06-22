@@ -103,15 +103,28 @@ struct CovalentLewisView: View {
         let text = homo
             ? "\(slotA.symbol)\((s.nA + s.nB) > 1 ? subscriptGlyphs(s.nA + s.nB) : "")"
             : "\(fst)\(fstN > 1 ? subscriptGlyphs(fstN) : "")\(snd)\(sndN > 1 ? subscriptGlyphs(sndN) : "")"
-        let label = bondOrder == 1 ? "Single" : bondOrder == 2 ? "Double" : "Triple"
+        let remark = orbitalMismatchRemark(slotA, slotB)
         return VStack(spacing: 2) {
             Text(text).font(.system(size: 20, weight: .bold)).foregroundStyle(.white)
             Text(covalentCompoundName(slotA: slotA, slotB: slotB, elements: model.elements))
                 .font(.system(size: 14)).foregroundStyle(Theme.text)
                 .multilineTextAlignment(.center)
-            Text("\(label) covalent bond · \(bondOrder) shared pair\(bondOrder > 1 ? "s" : "") per bond")
-                .font(.system(size: 9)).tracking(1).foregroundStyle(.white.opacity(0.7)).multilineTextAlignment(.center)
+            if !remark.isEmpty {
+                Text(remark)
+                    .font(.system(size: 9)).tracking(1).foregroundStyle(.white.opacity(0.7)).multilineTextAlignment(.center)
+            }
         }
+    }
+
+    /// Caption shown under the compound name only when two same‑group, different‑period
+    /// atoms (Group 16) trigger the orbital‑mismatch rule. Empty otherwise — no caption.
+    private func orbitalMismatchRemark(_ a: ZoneState, _ b: ZoneState) -> String {
+        guard isOrbitalMismatchDoubleBond(groupA: a.group, periodA: a.period, veA: a.valenceElectrons,
+                                          groupB: b.group, periodB: b.period, veB: b.valenceElectrons)
+        else { return "" }
+        let larger = a.period > b.period ? a : b
+        let smaller = a.period > b.period ? b : a
+        return "Group \(larger.group) orbital mismatch · \(larger.symbol) central, two \(smaller.symbol)"
     }
 }
 
