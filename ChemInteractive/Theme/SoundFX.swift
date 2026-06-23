@@ -12,9 +12,8 @@ enum SoundFX {
     }
 }
 
-/// Synthesises and plays a short "burning / fire" reaction sound: a low noise
-/// roar + airy hiss + random crackle pops, shaped by a fast‑attack / slow‑decay
-/// envelope.
+/// Synthesises and plays a "match strike" reaction sound: a short scratchy
+/// strike, then an igniting flare (low roar swell + decay) with crackle pops.
 final class ReactionSound {
     static let shared = ReactionSound()
 
@@ -24,7 +23,7 @@ final class ReactionSound {
     private let buffer: AVAudioPCMBuffer
 
     private init() {
-        buffer = ReactionSound.makeFire(format: format)
+        buffer = ReactionSound.makeMatchStrike(format: format)
         engine.attach(player)
         engine.connect(player, to: engine.mainMixerNode, format: format)
         try? AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
@@ -41,30 +40,44 @@ final class ReactionSound {
         }
     }
 
-    /// One‑shot ~1s fire buffer: low rumble (roar) + hiss + crackle pops.
-    private static func makeFire(format: AVAudioFormat) -> AVAudioPCMBuffer {
+    /// One‑shot ~0.6s buffer: a scratchy strike (~55ms) then an igniting flare.
+    private static func makeMatchStrike(format: AVAudioFormat) -> AVAudioPCMBuffer {
         let sampleRate = 44_100.0
-        let duration = 1.0
+        let duration = 0.6
         let frames = AVAudioFrameCount(sampleRate * duration)
         let buf = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames)!
         buf.frameLength = frames
         let samples = buf.floatChannelData![0]
 
-        var roar: Float = 0      // low‑passed noise → fire roar
-        var hiss: Float = 0      // lightly filtered noise → airy hiss
-        var crackle: Float = 0   // decaying envelope for random pops
+        let strikeEnd = 0.055
+        var roar: Float = 0
+        var prevWhite: Float = 0
+        var crackle: Float = 0
         for i in 0..<Int(frames) {
             let t = Double(i) / sampleRate
-            // Fast attack (~10ms), slow decay → a burst that settles and fades.
-            let env = Float((1 - exp(-t * 120.0)) * exp(-t * 2.3))
             let white = Float.random(in: -1...1)
-            roar += 0.03 * (white - roar)          // deep rumble
-            hiss += 0.45 * (white - hiss)          // bright hiss
-            // Occasionally retrigger a sharp, fast‑decaying crackle (wood snap).
-            if Float.random(in: 0...1) < 0.0009 { crackle = Float.random(in: 0.6...1.0) }
-            crackle *= 0.86
-            let pop = Float.random(in: -1...1) * crackle
-            samples[i] = (roar * 0.7 + hiss * 0.25 + pop * 0.55) * env * 0.7
+            var s: Float
+
+            if t < strikeEnd {
+                // Scratch: high-passed noise (derivative emphasises highs) gated
+                // by a buzz, under a short gaussian blip ≈ the friction strike.
+                let highs = 0.5 * (white - prevWhite)
+                let buzz: Float = sin(2 * .pi * 950 * t) > 0 ? 1.0 : 0.35
+                let blip = Float(exp(-pow((t - 0.022) / 0.014, 2)))
+                s = highs * buzz * blip * 1.4
+            } else {
+                // Flare: noise swell (attack) then decay, low-passed to a roar,
+                // with occasional sharp crackle pops.
+                let ft = t - strikeEnd
+                let flare = Float((1 - exp(-ft * 26.0)) * exp(-ft * 4.5))
+                roar += 0.12 * (white - roar)
+                if Float.random(in: 0...1) < 0.0011 { crackle = Float.random(in: 0.4...0.9) }
+                crackle *= 0.85
+                let pop = Float.random(in: -1...1) * crackle
+                s = (roar * 0.75 + white * 0.15 + pop * 0.45) * flare
+            }
+            prevWhite = white
+            samples[i] = s * 0.7
         }
         return buf
     }
