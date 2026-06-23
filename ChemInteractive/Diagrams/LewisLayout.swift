@@ -86,7 +86,8 @@ struct CovalentLayout: Equatable {
 }
 
 func covalentLayout(slotA: ZoneState, slotB: ZoneState) -> CovalentLayout {
-    let s = calcStoich(veA: slotA.valenceElectrons, veB: slotB.valenceElectrons)
+    let s = covalentStoich(veA: slotA.valenceElectrons, groupA: slotA.group, periodA: slotA.period,
+                           veB: slotB.valenceElectrons, groupB: slotB.group, periodB: slotB.period)
     let centralIsA = s.nA <= s.nB                 // central = the smaller-count atom
     let central = centralIsA ? slotA : slotB
     let peripheral = centralIsA ? slotB : slotA

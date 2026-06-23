@@ -7,10 +7,11 @@ final class CompoundNameTests: XCTestCase {
     private var ions: [PolyatomicIon] { PolyatomicIon.polyatomicIons }
 
     private func ion(_ symbol: String, _ cls: ElementClass, ve: Int, charge: Int,
-                     transition: Bool = false, oxStates: [Int]? = nil, poly: Bool = false) -> ZoneState {
+                     transition: Bool = false, oxStates: [Int]? = nil, poly: Bool = false,
+                     group: Int = 0, period: Int = 0) -> ZoneState {
         ZoneState(symbol: symbol, elementClass: cls, isPolyatomic: poly, isTransition: transition,
                   valenceElectrons: ve, oxidationStates: oxStates ?? [charge],
-                  derivedCharge: charge, status: .ionized)
+                  derivedCharge: charge, status: .ionized, group: group, period: period)
     }
 
     func test_ionic_fixedCharge() {
@@ -62,5 +63,11 @@ final class CompoundNameTests: XCTestCase {
         let o = ion("O", .nonMetal, ve: 6, charge: 0)
         // calcStoich(C,O) → CO₂; iupacFirst puts C first.
         XCTAssertEqual(covalentCompoundName(slotA: c, slotB: o, elements: elements), "Carbon dioxide")
+    }
+
+    func test_covalentCompound_orbitalMismatch_SO2() {
+        let s = ion("S", .nonMetal, ve: 6, charge: 0, group: 16, period: 3)
+        let o = ion("O", .nonMetal, ve: 6, charge: 0, group: 16, period: 2)
+        XCTAssertEqual(covalentCompoundName(slotA: s, slotB: o, elements: elements), "Sulfur dioxide")
     }
 }
