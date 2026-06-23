@@ -82,7 +82,12 @@ struct BridgeView: View {
     // MARK: - Helpers
 
     private var stoichiometryButton: some View {
-        Button("Stoichiometry") { model.send(.startStoichiometry) }
-            .buttonStyle(.borderedProminent)
+        Button { model.send(.startStoichiometry) } label: {
+            Image(systemName: "scalemass")
+                .font(.system(size: 18, weight: .semibold))
+                .padding(.horizontal, 4)
+        }
+        .buttonStyle(.borderedProminent)
+        .accessibilityLabel("Stoichiometry")
     }
 }

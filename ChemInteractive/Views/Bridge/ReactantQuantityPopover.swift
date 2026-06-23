@@ -16,12 +16,12 @@ struct ReactantQuantityPopover: View {
         // Narrow layout (unit on its own line) so the popover can't cover the
         // other reactant or its knob.
         VStack(alignment: .leading, spacing: 8) {
-            Text(symbol).font(.caption.weight(.semibold))
             // Numeric field: ≥48pt tap target, decimal keypad, distinct focus ring.
             TextField("0.00", text: $text)
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .focused($fieldFocused)
+                .accessibilityLabel("Quantity of \(symbol)")
                 .frame(maxWidth: .infinity, minHeight: 48)
                 .padding(.horizontal, 10)
                 .background(Theme.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
