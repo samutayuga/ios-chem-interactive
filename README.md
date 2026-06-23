@@ -16,7 +16,9 @@ calculator: a knob on each flask opens a quantity input (mole or mass), and the 
 equation (e.g. `2H₂ + O₂ → 2H₂O`) renders as tappable chips. Tapping a reactant chip
 shows its role (limiting / excess reagent / stoichiometric) and amount consumed/unreacted;
 tapping the product chip shows the theoretical yield. Naturally‑diatomic elements
-(H, N, O, F, Cl, Br, I) are auto‑treated as X₂.
+(H, N, O, F, Cl, Br, I) are auto‑treated as X₂. When both reactants have an amount (or a
+unit is switched), a **reaction effect** fires — a synthesised match‑strike sound + a
+sparkle burst over the equation.
 
 It is a pure‑Swift port of an existing React + Rust/WASM app. **No WebAssembly, FFI, or JS
 bridge ships in the binary** — the chemistry domain logic was ported from the Rust
@@ -415,6 +417,12 @@ flowchart TB
   "stoichiometric ratio" banner when neither reactant limits.
 - `StoichMetricRow` — the shared icon‑led `mol` (emphasised) + `g` (muted) amount row used by
   both detail popovers.
+- `ReactionBurst` (`ReactionBurst.swift`) + `SoundFX` (`Theme/SoundFX.swift`) — the **reaction
+  effect**. `BridgeView` watches a units‑keyed signal (so it fires when both amounts are first
+  set *and* when a unit is switched, but not on every keystroke) and calls `fireReaction()`:
+  a brief scale pulse + `ReactionBurst` (expanding ring + sparkles flying outward) over the
+  equation, plus `SoundFX.reaction()` — a **runtime‑synthesised match‑strike** (scratchy strike
+  → igniting flare + crackles via `AVAudioEngine`, no bundled audio) and a success haptic.
 
 In `.stoichiometry`, `ChemCanvasView` relays out the workspace: the two flasks sit **side by
 side** with the result panel **full width** below, so the equation has room.
