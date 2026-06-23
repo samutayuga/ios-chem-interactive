@@ -10,6 +10,7 @@ struct ReactantQuantityPopover: View {
 
     @State private var text: String = ""
     @State private var unit: QuantityUnit = .mole
+    @FocusState private var fieldFocused: Bool
 
     private var isDiatomic: Bool { naturallyDiatomic.contains(symbol) }
 
@@ -17,16 +18,28 @@ struct ReactantQuantityPopover: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Quantity of \(symbol)").font(.caption.weight(.semibold))
             HStack(spacing: 6) {
+                // Numeric field: ≥48pt tap target, decimal keypad, distinct focus ring.
                 TextField("0", text: $text)
-                    .frame(width: 70)
-                    .multilineTextAlignment(.trailing)
                     .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .focused($fieldFocused)
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .padding(.horizontal, 10)
+                    .background(Theme.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(fieldFocused ? Theme.accent : Theme.accent.opacity(0.35),
+                                    lineWidth: fieldFocused ? 2.5 : 1)
+                    )
+                    .shadow(color: fieldFocused ? Theme.accent.opacity(0.5) : .clear, radius: 5)
+                    .animation(.easeOut(duration: 0.15), value: fieldFocused)
                     .onChange(of: text) { _, _ in sync() }
                 Picker("", selection: $unit) {
                     Text("mol").tag(QuantityUnit.mole)
                     Text("g").tag(QuantityUnit.mass)
                 }
                 .pickerStyle(.segmented)
+                .frame(width: 88)
                 .onChange(of: unit) { _, _ in sync() }
             }
             if isDiatomic {
@@ -35,11 +48,13 @@ struct ReactantQuantityPopover: View {
             }
         }
         .padding(12)
-        .frame(width: 220)
+        .frame(width: 240)
         .fixedSize(horizontal: false, vertical: true)
         .presentationCompactAdaptation(.popover)
         .onAppear {
             if let e = entry { text = trimmed(e.value); unit = e.unit }
+            // Defer a tick so focus lands after the popover finishes presenting.
+            DispatchQueue.main.async { fieldFocused = true }
         }
     }
 
