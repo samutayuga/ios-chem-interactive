@@ -8,6 +8,13 @@ struct BridgeView: View {
     private var state: CanvasState { model.state }
     private var bothQuantitiesSet: Bool { model.quantityA != nil && model.quantityB != nil }
 
+    /// Changes when either reactant's unit changes or first appears — but not on
+    /// live value typing, so the reaction fires on both-set and on unit switches
+    /// without firing on every keystroke.
+    private var reactionKey: String {
+        "\(model.quantityA?.unit.rawValue ?? "-")|\(model.quantityB?.unit.rawValue ?? "-")"
+    }
+
     /// Both reactants now have an amount → fire the reaction sound + burst.
     private func fireReaction() {
         SoundFX.reaction()
@@ -83,8 +90,8 @@ struct BridgeView: View {
                             .overlay { if reactionPulse { ReactionBurst() } }
                         ResetButton { model.send(.reset) }
                     }
-                    .onChange(of: bothQuantitiesSet) { _, set in
-                        if set { fireReaction() }
+                    .onChange(of: reactionKey) { _, _ in
+                        if bothQuantitiesSet { fireReaction() }
                     }
                 }
 
