@@ -90,6 +90,12 @@ struct BridgeView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .top)
+        .onChange(of: state.canvasPhase) { _, newPhase in
+            if newPhase == .selecting || newPhase == .slotAFilled {
+                entryA = nil; entryB = nil
+                showPopoverA = false; showPopoverB = false
+            }
+        }
     }
 
     // MARK: - Helpers

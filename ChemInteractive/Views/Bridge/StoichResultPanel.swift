@@ -45,6 +45,9 @@ struct StoichResultPanel: View {
                 Text("Excess: \(fmt(result.excess.moles)) mol (\(fmt(result.excess.mass)) g) \(sym) remaining")
                     .font(.caption)
             }
+            ForEach(result.diatomicMessages, id: \.self) { msg in
+                Text(msg).font(.caption2).foregroundStyle(.orange)
+            }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)

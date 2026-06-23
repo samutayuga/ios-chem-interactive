@@ -89,4 +89,13 @@ final class StoichiometryTests: XCTestCase {
         XCTAssertEqual(r.diatomicMessages,
                        ["Cl cannot exist as monoatomic, It only exist in Cl₂"])
     }
+
+    func test_excess_neverNegative() {
+        // Equal stoichiometric extents: excess must be exactly 0, never a tiny negative.
+        let h = spec("H", 1, 2, true, ReactantEntry(value: 2, unit: .mole))
+        let o = spec("O", 16, 1, true, ReactantEntry(value: 1, unit: .mole))
+        let r = solveStoichiometry(a: h, b: o)
+        XCTAssertGreaterThanOrEqual(r.excess.moles, 0)
+        XCTAssertEqual(r.excess.moles, 0, accuracy: 1e-9)
+    }
 }

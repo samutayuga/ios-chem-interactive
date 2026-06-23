@@ -109,10 +109,10 @@ public func solveStoichiometry(a: ReactantSpec, b: ReactantSpec) -> StoichResult
 
     var excess = AmountResult(moles: 0, mass: 0)
     if limiting == .a, let mb = molB {
-        let left = mb - Double(eqn.coeffB) * xi
+        let left = max(0, mb - Double(eqn.coeffB) * xi)
         excess = AmountResult(moles: left, mass: left * unitMassB)
     } else if limiting == .b, let ma = molA {
-        let left = ma - Double(eqn.coeffA) * xi
+        let left = max(0, ma - Double(eqn.coeffA) * xi)
         excess = AmountResult(moles: left, mass: left * unitMassA)
     }
 

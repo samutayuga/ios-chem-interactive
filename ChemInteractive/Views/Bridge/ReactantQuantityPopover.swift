@@ -20,6 +20,7 @@ struct ReactantQuantityPopover: View {
                 TextField("0", text: $text)
                     .frame(width: 70)
                     .multilineTextAlignment(.trailing)
+                    .keyboardType(.decimalPad)
                     .onChange(of: text) { _, _ in sync() }
                 Picker("", selection: $unit) {
                     Text("mol").tag(QuantityUnit.mole)
