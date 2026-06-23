@@ -10,6 +10,14 @@ zones are bubbling potion flasks whose fill animates by state of matter (solid/l
 gas/aqueous); results show the compound name, a heuristic product state‑of‑matter badge
 (solid/liquid/gas), and a tappable bond explanation.
 
+A second use case, **stoichiometry**, layers on top of the bond result. Once a binary
+compound forms, a **⚖ Stoichiometry** button clears the diagram and switches to a
+calculator: a knob on each flask opens a quantity input (mole or mass), and the balanced
+equation (e.g. `2H₂ + O₂ → 2H₂O`) renders as tappable chips. Tapping a reactant chip
+shows its role (limiting / excess reagent / stoichiometric) and amount consumed/unreacted;
+tapping the product chip shows the theoretical yield. Naturally‑diatomic elements
+(H, N, O, F, Cl, Br, I) are auto‑treated as X₂.
+
 It is a pure‑Swift port of an existing React + Rust/WASM app. **No WebAssembly, FFI, or JS
 bridge ships in the binary** — the chemistry domain logic was ported from the Rust
 `pt-domain` crate to native Swift and is verified against the original (see
@@ -17,7 +25,7 @@ bridge ships in the binary** — the chemistry domain logic was ported from the 
 
 - **Platform:** iOS 17.0+, portrait iPhone.
 - **Language:** Swift 5 language mode, SwiftUI.
-- **Tests:** 79 in `ChemCore` + 68 in the app target, all command‑line runnable.
+- **Tests:** 93 in `ChemCore` + 68 in the app target, all command‑line runnable.
 
 ---
 
@@ -90,7 +98,7 @@ ios-chem-interactive/
 │   │   ├── Engine/                 # bonding pedagogy (valence, stoich, metallic, gcd)
 │   │   ├── State/                  # the canvas state machine (pure reducer)
 │   │   └── Resources/elements.raw.json
-│   └── Tests/ChemCoreTests/        # 71 XCTests incl. golden WASM-fidelity check
+│   └── Tests/ChemCoreTests/        # 93 XCTests incl. golden WASM-fidelity check
 ├── ChemInteractive/                # the SwiftUI app (Plans 2 & 3)
 │   ├── ChemInteractiveApp.swift    # @main, injects the model
 │   ├── State/CanvasModel.swift     # @Observable wrapper over the reducer
@@ -166,6 +174,7 @@ The teaching logic that lives in the React app (not in Rust). All pure functions
 | Covalent stoichiometry | `calcStoich(veA:veB:) -> (nA, nB, bondOrder)` from octet/duet bonds‑needed and their gcd; `covalentStoich(veA:groupA:periodA:veB:groupB:periodB:)` wraps it with the **orbital‑mismatch rule** (below); `isOrbitalMismatchDoubleBond(…)` is the rule predicate; `iupacFirst(_:_:)` orders binary formulas by electronegativity | `Engine/CovalentStoich.swift` |
 | Metallic count | `metallicElectronCount(veA:veB:poolSize:)` = `min(3·veA + 3·veB, 12)` delocalised electrons | `Engine/Metallic.swift` |
 | Product state | `predictProductState(bonding:a:b:) -> ProductState` — **heuristic** standard‑state of the product: ionic/metallic → solid; covalent estimated from constituents' `stateOfMatter` (any gas → gas, else any liquid → liquid, else solid; H₂O special‑cased liquid). Approximate, for the result badge | `Engine/ProductState.swift` |
+| Stoichiometry | `balanceEquation(subscriptA:molecularityA:subscriptB:molecularityB:)` finds smallest‑integer coefficients for `aA_p + bB_q → cAₓBᵧ` (rebalancing for diatomic X₂); `solveStoichiometry(a:b:)` takes two `ReactantSpec`s (atomic mass, product subscript, diatomic flag, optional `ReactantEntry` of mole/mass) and returns a `StoichResult` (balanced equation, limiting side, theoretical `yield`, `excess`, diatomic notes). `naturallyDiatomic` is the 7‑element set; blank entry = "enough" | `Engine/Stoichiometry.swift` |
 | Math | `gcd(_:_:)` (Euclidean) | `Engine/MathUtil.swift` |
 
 **Orbital‑mismatch double‑bond rule** (`covalentStoich` / `isOrbitalMismatchDoubleBond`). Two
@@ -207,19 +216,22 @@ stateDiagram-v2
     animatingCrossover --> complete
     showingCovalent --> complete
     showingMetallic --> complete
+    complete --> stoichiometry: ⚖ (ionic)
+    showingCovalent --> stoichiometry: ⚖ (covalent)
     complete --> selecting: reset
+    stoichiometry --> selecting: reset / pick element
 ```
 
 | Type / function | Role | File |
 | --- | --- | --- |
-| `CanvasPhase` | `selecting → slotAFilled → explaining → animatingCrossover / showingCovalent / showingMetallic → complete` | `State/Phase.swift` |
+| `CanvasPhase` | `selecting → slotAFilled → explaining → animatingCrossover / showingCovalent / showingMetallic → complete`, plus `stoichiometry` (the calculator use case) | `State/Phase.swift` |
 | `Slot` | `.a` / `.b`, with `.other` | `State/Phase.swift` |
 | `ZoneStatus` | `.neutral` / `.deducing` / `.ionized` | `State/Phase.swift` |
 | `ZoneState` | a filled slot: symbol, `elementClass`, `isPolyatomic`, `isTransition`, `valenceElectrons`, `oxidationStates`, `derivedCharge`, `status`, `group`, `period`, `stateOfMatter`. Built from an `Element` (carries `group`/`period`/`stateOfMatter`) or a `PolyatomicIon` (defaults). `group`/`period` feed the orbital‑mismatch rule; `stateOfMatter` feeds the product‑state badge | `State/ZoneState.swift` |
 | `PolyatomicIon` | the 6 hard‑coded ions (OH⁻, NO₃⁻, SO₄²⁻, CO₃²⁻, PO₄³⁻, NH₄⁺) | `State/PolyatomicIon.swift` |
 | `CanvasState` | `{ canvasPhase, bondingType?, slotA?, slotB? }`, plus `.initial` | `State/CanvasState.swift` |
-| `CanvasAction` | `dropElement(slot:zone:)`, `pickTMCharge(slot:charge:)`, `dismissExplanation`, `replaceElement(slot:)`, `crossoverComplete`, `reset` | `State/CanvasState.swift` |
-| `canvasReducer(_:_:)` | the pure transition function. Auto‑ionises ionic pairs on drop, routes transition metals to a `.deducing` charge picker, blocks `dismissExplanation` while a slot is still deducing, restarts when a third token is dropped on two filled slots | `State/CanvasReducer.swift` |
+| `CanvasAction` | `dropElement(slot:zone:)`, `pickTMCharge(slot:charge:)`, `dismissExplanation`, `replaceElement(slot:)`, `crossoverComplete`, `startStoichiometry`, `reset` | `State/CanvasState.swift` |
+| `canvasReducer(_:_:)` | the pure transition function. Auto‑ionises ionic pairs on drop, routes transition metals to a `.deducing` charge picker, blocks `dismissExplanation` while a slot is still deducing, restarts when a third token is dropped on two filled slots. `startStoichiometry` moves `.complete` (ionic) or `.showingCovalent` to `.stoichiometry`, preserving the slots — the one state‑machine touch the stoichiometry feature needs | `State/CanvasReducer.swift` |
 
 ---
 
@@ -238,13 +250,21 @@ maps state to SwiftUI views, and maps gestures to actions.
     let elements: [Element]                 // 118, from PeriodicTable.load()
     let polyatomicIons = PolyatomicIon.polyatomicIons
     private(set) var selectedToken: TokenTransfer?
+    var quantityA, quantityB: ReactantEntry? // stoichiometry input (UI-only, never in CanvasState)
 
-    func send(_ action: CanvasAction) { state = canvasReducer(state, action) }
+    func send(_ action: CanvasAction) { state = canvasReducer(state, action); /* clears quantities on a new reaction */ }
     func place(_ token: TokenTransfer, in slot: Slot) { … }   // resolve → drop → clear selection
     func zoneState(for token: TokenTransfer) -> ZoneState?    // rebuild a ZoneState via ChemCore
-    func select(_:) / clearSelection()
+    func select(_:) / clearSelection()      // select() resets to bonding when in .stoichiometry
 }
 ```
+
+- **Stoichiometry is derived, not stored.** `CanvasModel+Stoichiometry.swift` adds computed
+  `stoichResult` / `productFormula` and `reactantOutcome(for:)` (consumed + unreacted per slot)
+  by reusing the existing product subscripts (`crossoverModel` for ionic, `covalentStoich` for
+  covalent) and calling `solveStoichiometry`. Quantities (`quantityA`/`quantityB`) are transient
+  UI state — they reset whenever a new reaction starts (phase back to `selecting`/`slotAFilled`),
+  so a previous reaction's amounts never leak.
 
 - The model owns element loading and is injected once at the app root
   (`ChemInteractiveApp.swift`: `@State private var model = CanvasModel()` →
@@ -339,7 +359,8 @@ flowchart TB
   icon; with a pending selection it shows the symbol + a `hand.tap` cue; a filled slot
   shows the element symbol centered in the bulb. A `×` clear button dispatches
   `.replaceElement`. Slot A cation‑green, Slot B anion‑pink; `.contentShape`/gestures
-  bound to the flask.
+  bound to the flask. In the `.stoichiometry` phase a **knob** (slider icon) on the flask
+  neck opens that reactant's quantity popover, and the entered amount renders inside the bulb.
 - `SubstanceFill` (`SubstanceFill.swift`) — the occupied‑slot fill, animated by
   state of matter (`resolveSubstanceState`: element `raw.state`, ions → aqueous):
   **solid** chunk drops + settles, **liquid** rises with a wave, **gas** bubbles
@@ -369,13 +390,34 @@ flowchart TB
   above each diagram.
 - `BridgeView` — the **phase router**. Shows the `⇌` glyph always and switches on
   `state.canvasPhase` to render the right result view (formula + name **above** the
-  Lewis‑dot diagram, consistently). Reset buttons (`ResetButton.swift`) dispatch `.reset`.
+  Lewis‑dot diagram, consistently). The ionic `.complete` and covalent `.showingCovalent`
+  views carry the **⚖ Stoichiometry** button (`startStoichiometry`); the `.stoichiometry`
+  phase renders the result equation panel. Reset buttons (`ResetButton.swift`) dispatch `.reset`.
 - `ProductStateBadge` (`ProductStateBadge.swift`) — a small pill under each result's
   compound name showing `ChemCore.predictProductState` (solid/liquid/gas). The state is
   a tiny **kinetic‑theory particle animation** with no text (`StateParticles`: solid =
   lattice vibrating in place, liquid = packed particles flowing, gas = few bouncing
   freely), tinted per state. Wired into all three result views (ionic in `BridgeView`,
   covalent in `CovalentLewisView`, metallic in `MetallicSeaView`).
+
+**Stoichiometry views — `Views/Bridge/` (the `.stoichiometry` phase):**
+
+- `StoichResultPanel` — renders the balanced equation as a row of tinted **chips**; each
+  reactant and the product is a button anchoring its detail popover (chips, not underlines,
+  signal interactivity). Long equations scale/clip to one line.
+- `ReactantQuantityPopover` — the flask‑knob input: a decimal‑pad numeric field (auto‑focused,
+  focus ring, ≥48pt tap target) with a `mol`/`g` segmented unit on its own line; narrow so it
+  can't cover the other flask. Writes a `ReactantEntry?` (nil when blank/invalid).
+- `ReactantDetailPopover` — a symbol badge + role pill (**Limiting reagent / Excess reagent /
+  Stoichiometric**), `Consumed` and (when in excess) `Unreacted` metric rows, and a diatomic
+  banner. Reads `model.reactantOutcome(for:)`.
+- `ProductDetailPopover` — a formula badge + "Product" pill, the `Yield` metric row, and a
+  "stoichiometric ratio" banner when neither reactant limits.
+- `StoichMetricRow` — the shared icon‑led `mol` (emphasised) + `g` (muted) amount row used by
+  both detail popovers.
+
+In `.stoichiometry`, `ChemCanvasView` relays out the workspace: the two flasks sit **side by
+side** with the result panel **full width** below, so the equation has room.
 
 ### Cation/anion ordering
 
@@ -458,7 +500,7 @@ flowchart LR
 reducer actions** (so it can't drift from production behavior):
 
 ```bash
-# seed a result diagram (crossover | ionic | mgcl2 | na2o | explainIonic | covalent | co2 | metallic)
+# seed a result diagram (crossover | ionic | mgcl2 | na2o | explainIonic | covalent | co2 | metallic | stoich)
 xcrun simctl launch booted com.cheminteractive.app --args -diagramPreview mgcl2
 # open an element's detail card (any symbol) for screenshots
 xcrun simctl launch booted com.cheminteractive.app --args -detailElement Fe
@@ -468,7 +510,8 @@ xcrun simctl launch booted com.cheminteractive.app --args -detailElement Fe
 `debugPreviewArgument(_:)`) invoked from a `.task` in `ChemInteractiveApp` —
 it replays real reducer actions so it can't drift from production. `mgcl2`/`na2o`
 exercise the ionic anion/cation coefficients; `co2` the covalent `×N` count;
-`explainIonic` stops at the explanation modal. `-detailElement` is a `#if DEBUG`
+`explainIonic` stops at the explanation modal; `stoich` lands in the stoichiometry
+calculator (covalent H₂O) with sample quantities set. `-detailElement` is a `#if DEBUG`
 hook in `ElementTrayView` that opens the detail card. All compiled out of Release.
 
 ---
@@ -483,6 +526,9 @@ flowchart TD
     AC --> CMP["COMPLETE<br/>(formula + Lewis transfer)"]
     EX -->|"Apply → covalent"| SC["SHOWING_COVALENT<br/>(Lewis structure)"]
     EX -->|"Apply → metallic"| SM["SHOWING_METALLIC<br/>(electron sea)"]
+    CMP -->|"⚖ Stoichiometry"| ST["STOICHIOMETRY<br/>(quantity knobs + equation chips + detail popovers)"]
+    SC -->|"⚖ Stoichiometry"| ST
+    ST -->|"Reset / pick element"| S
     CMP -->|Reset| S
     SC -->|Reset| S
     SM -->|Reset| S
@@ -497,7 +543,7 @@ Every transition is a pure `canvasReducer` call; the views only *render* the cur
 
 | Suite | Count | What it proves |
 | --- | --- | --- |
-| `ChemCore` PTDomain/Engine/State | 71 | electron configuration (incl. anomalies), block/period/group/category/class/oxidation states, atomic mass, every reducer transition, valence/bonding/stoich/metallic math, the covalent orbital‑mismatch rule (SO₂/SeS₂ + ClF/NP/O₂/CO₂ negatives), ZoneState group/period |
+| `ChemCore` PTDomain/Engine/State | 93 | electron configuration (incl. anomalies), block/period/group/category/class/oxidation states, atomic mass, every reducer transition (incl. `startStoichiometry`), valence/bonding/metallic math, the covalent orbital‑mismatch rule (SO₂/SeS₂ + ClF/NP/O₂/CO₂ negatives), ZoneState group/period, product‑state heuristic, and stoichiometry (equation balancing for H₂O/NaCl/MgCl₂, limiting reactant, theoretical yield, excess, diatomic handling) |
 | **Golden fidelity** (`GoldenFidelityTests`) | — | for **all 118 elements**, every Swift‑computed derived field matches the original WASM's output (`elements.golden.json`, generated once by `tools/dump-elements.mjs`) |
 | App `LewisLayoutTests` | 14 | the diagram geometry counts (crossover subscripts/steps, Lewis transfer counts, covalent central/lone‑pair counts incl. the SO₂ orbital‑mismatch layout, metallic count/pattern) |
 | App `CompoundNameTests`, `BondingExplanationTests` | — | covalent compound naming + bond wording, incl. the SO₂ orbital‑mismatch name ("Sulfur dioxide") and explanation sentence |
