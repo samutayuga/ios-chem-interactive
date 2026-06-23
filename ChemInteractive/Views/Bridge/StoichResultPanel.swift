@@ -25,10 +25,18 @@ struct StoichResultPanel: View {
         return e.coeffProduct == 1 ? productFormula : "\(e.coeffProduct)\(productFormula)"
     }
 
+    /// A tappable term rendered as a tinted chip — signals "interactive" without
+    /// underlines.
+    private func chipLabel(_ label: String) -> some View {
+        Text(label)
+            .foregroundStyle(Theme.accent)
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(Theme.accent.opacity(0.16), in: RoundedRectangle(cornerRadius: 6))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.accent.opacity(0.35), lineWidth: 1))
+    }
+
     private func reactantTerm(_ label: String, slot: Slot, show: Binding<Bool>) -> some View {
-        Button { show.wrappedValue = true } label: {
-            Text(label).underline().foregroundStyle(Theme.accent)
-        }
+        Button { show.wrappedValue = true } label: { chipLabel(label) }
         .buttonStyle(.plain)
         .popover(isPresented: show) {
             ReactantDetailPopover(symbol: slot == .a ? symbolA : symbolB, slot: slot)
@@ -37,14 +45,12 @@ struct StoichResultPanel: View {
 
     var body: some View {
         let e = result.equation
-        HStack(spacing: 3) {
+        HStack(spacing: 4) {
             reactantTerm(term(e.coeffA, symbolA, e.molecularityA), slot: .a, show: $showDetailA)
-            Text("+")
+            Text("+").foregroundStyle(Theme.text.opacity(0.7))
             reactantTerm(term(e.coeffB, symbolB, e.molecularityB), slot: .b, show: $showDetailB)
-            Text("→")
-            Button { showProduct = true } label: {
-                Text(rhs).underline().foregroundStyle(Theme.accent)
-            }
+            Text("→").foregroundStyle(Theme.text.opacity(0.7))
+            Button { showProduct = true } label: { chipLabel(rhs) }
             .buttonStyle(.plain)
             .popover(isPresented: $showProduct) {
                 ProductDetailPopover(result: result, productFormula: productFormula)
