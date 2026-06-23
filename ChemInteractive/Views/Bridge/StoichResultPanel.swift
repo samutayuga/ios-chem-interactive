@@ -2,22 +2,14 @@
 import SwiftUI
 import ChemCore
 
-/// Renders a StoichResult: balanced equation, limiting reactant, yield, excess.
+/// The balanced reaction equation, on its own. Per-reactant detail (limiting,
+/// yield, excess, diatomic notes) lives in each reactant's popover to keep this
+/// box uncluttered.
 struct StoichResultPanel: View {
     let result: StoichResult
     let symbolA: String
     let symbolB: String
     let productFormula: String
-
-    private func fmt(_ v: Double) -> String { String(format: "%.3g", v) }
-
-    private var limitingSymbol: String? {
-        switch result.limiting {
-        case .a: return symbolA
-        case .b: return symbolB
-        case .both: return nil
-        }
-    }
 
     private var equationText: String {
         let e = result.equation
@@ -31,26 +23,13 @@ struct StoichResultPanel: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(equationText).font(.callout.weight(.semibold))
-            if let lim = limitingSymbol {
-                Text("Limiting reactant: \(lim)").font(.caption)
-            } else {
-                Text("Stoichiometric (no limiting reactant)").font(.caption)
-            }
-            Text("Theoretical yield: \(fmt(result.yield.moles)) mol (\(fmt(result.yield.mass)) g) \(productFormula)")
-                .font(.caption)
-            if result.excess.moles > 0 {
-                let sym = result.limiting == .a ? symbolB : symbolA
-                Text("Excess: \(fmt(result.excess.moles)) mol (\(fmt(result.excess.mass)) g) \(sym) remaining")
-                    .font(.caption)
-            }
-            ForEach(result.diatomicMessages, id: \.self) { msg in
-                Text(msg).font(.caption2).foregroundStyle(.orange)
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        Text(equationText)
+            .font(.callout.weight(.semibold))
+            .multilineTextAlignment(.center)
+            .lineLimit(2)
+            .minimumScaleFactor(0.6)
+            .padding(.vertical, 10).padding(.horizontal, 14)
+            .frame(maxWidth: .infinity)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
 }
