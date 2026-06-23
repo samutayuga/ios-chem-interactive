@@ -325,7 +325,91 @@ git commit -m "feat: solve limiting reactant, yield and excess"
 
 ---
 
-### Task 3: Reactant quantity popover (SwiftUI)
+### Task 3: Stoichiometry mode transition (reducer)
+
+**Files:**
+- Modify: `ChemCore/Sources/ChemCore/State/Phase.swift` (add `.stoichiometry` case)
+- Modify: `ChemCore/Sources/ChemCore/State/CanvasState.swift` (add `.startStoichiometry` action)
+- Modify: `ChemCore/Sources/ChemCore/State/CanvasReducer.swift` (handle it)
+- Test: `ChemCore/Tests/ChemCoreTests/CanvasReducerTests.swift` (add case)
+
+**Interfaces:**
+- Consumes: existing `CanvasState`, `canvasReducer`, `CanvasAction`, `CanvasPhase`.
+- Produces: `CanvasPhase.stoichiometry`; `CanvasAction.startStoichiometry`;
+  reducer rule: from `.complete`, `.startStoichiometry` → phase `.stoichiometry`
+  with `slotA`, `slotB`, `bondingType` preserved; a no-op from any other phase.
+
+- [ ] **Step 1: Write the failing test**
+
+```swift
+// Add to CanvasReducerTests
+func test_startStoichiometry_fromComplete() {
+    var s = canvasReducer(.initial, .dropElement(slot: .a, zone: metal("Na", oxidation: [1])))
+    s = canvasReducer(s, .dropElement(slot: .b, zone: nonmetal("Cl", oxidation: [-1])))
+    s = canvasReducer(s, .dismissExplanation)   // -> animatingCrossover
+    s = canvasReducer(s, .crossoverComplete)     // -> complete
+    XCTAssertEqual(s.canvasPhase, .complete)
+    let stoich = canvasReducer(s, .startStoichiometry)
+    XCTAssertEqual(stoich.canvasPhase, .stoichiometry)
+    XCTAssertEqual(stoich.slotA?.symbol, "Na")   // reactants preserved
+    XCTAssertEqual(stoich.slotB?.symbol, "Cl")
+    XCTAssertEqual(stoich.bondingType, .ionic)
+}
+
+func test_startStoichiometry_ignoredBeforeComplete() {
+    let s = canvasReducer(.initial, .dropElement(slot: .a, zone: metal("Na")))
+    let same = canvasReducer(s, .startStoichiometry)
+    XCTAssertEqual(same.canvasPhase, .slotAFilled)   // no-op
+}
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd ChemCore && swift test --filter CanvasReducerTests`
+Expected: FAIL — `type 'CanvasAction' has no member 'startStoichiometry'`.
+
+- [ ] **Step 3: Write minimal implementation**
+
+In `Phase.swift`, add the case to `CanvasPhase`:
+
+```swift
+    case complete
+    case stoichiometry
+```
+
+In `CanvasState.swift`, add the action to `CanvasAction`:
+
+```swift
+    case crossoverComplete
+    case startStoichiometry
+    case reset
+```
+
+In `CanvasReducer.swift`, add a case in the `switch action` (before `.reset`):
+
+```swift
+    case .startStoichiometry:
+        guard state.canvasPhase == .complete else { return state }
+        var s = state
+        s.canvasPhase = .stoichiometry
+        return s
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd ChemCore && swift test --filter CanvasReducerTests`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add ChemCore/Sources/ChemCore/State/Phase.swift ChemCore/Sources/ChemCore/State/CanvasState.swift ChemCore/Sources/ChemCore/State/CanvasReducer.swift ChemCore/Tests/ChemCoreTests/CanvasReducerTests.swift
+git commit -m "feat: stoichiometry mode phase and transition"
+```
+
+---
+
+### Task 4: Reactant quantity popover (SwiftUI)
 
 **Files:**
 - Create: `ChemInteractive/Views/Bridge/ReactantQuantityPopover.swift`
@@ -407,7 +491,7 @@ git commit -m "feat: reactant quantity popover with diatomic notice"
 
 ---
 
-### Task 4: Stoich result panel (SwiftUI)
+### Task 5: Stoich result panel (SwiftUI)
 
 **Files:**
 - Create: `ChemInteractive/Views/Bridge/StoichResultPanel.swift`
@@ -491,7 +575,7 @@ git commit -m "feat: stoich result panel view"
 
 ---
 
-### Task 5: Wire popover + panel into BridgeView
+### Task 6: Wire button, phase switch, popover + panel into BridgeView
 
 **Files:**
 - Modify: `ChemInteractive/Views/Bridge/BridgeView.swift`
@@ -535,34 +619,53 @@ On each reactant token view (slot A and slot B), add (adjust the trigger to matc
 
 with a matching `@State private var showPopoverA = false` / `showPopoverB` and a tap/hover gesture toggling them.
 
-- [ ] **Step 3: Render the result panel for ionic/covalent products**
+- [ ] **Step 3: Add the Stoichiometry button in the `.complete` phase**
 
-Where the product/result is shown, add (guarded so it does NOT show for metallic):
+Where the completed bonding diagram is shown (phase `.complete`), add a button —
+only for non-metallic products — that starts the use case:
 
 ```swift
-if bondingType != .metallic,
-   let a = slotA, let b = slotB,
+if model.state.canvasPhase == .complete, model.state.bondingType != .metallic {
+    Button("Stoichiometry") { model.send(.startStoichiometry) }
+        .buttonStyle(.borderedProminent)
+}
+```
+
+- [ ] **Step 4: Switch the canvas body on phase — diagram vs stoichiometry view**
+
+Gate the main content so the Lewis/crossover diagram renders in the bonding
+phases and the stoichiometry view replaces it (diagram cleared) in
+`.stoichiometry`:
+
+```swift
+if model.state.canvasPhase == .stoichiometry,
+   let a = model.state.slotA, let b = model.state.slotB,
    let subs = productSubscripts(a, b),                 // (subA, subB) from existing engine
    let specA = spec(for: a, subscriptInProduct: subs.0, entry: entryA),
    let specB = spec(for: b, subscriptInProduct: subs.1, entry: entryB) {
     let result = solveStoichiometry(a: specA, b: specB)
-    StoichResultPanel(result: result, symbolA: a.symbol, symbolB: b.symbol,
-                      productFormula: productFormula(a, b))
+    VStack(spacing: 12) {
+        // the two reactant tokens, each carrying the popover from Step 2
+        StoichResultPanel(result: result, symbolA: a.symbol, symbolB: b.symbol,
+                          productFormula: productFormula(a, b))
+    }
+} else {
+    // existing bonding diagram content (unchanged)
 }
 ```
 
 Implement `productSubscripts(_:_:)` and `productFormula(_:_:)` as private helpers in `BridgeView` reusing the existing ionic (`crossoverModel`) and covalent (`covalentStoich`) logic already used by the diagrams — do not duplicate the math, call the same functions.
 
-- [ ] **Step 4: Build to verify it compiles**
+- [ ] **Step 5: Build to verify it compiles**
 
 Run: `xcodebuild -project ChemInteractive.xcodeproj -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17' build`
 Expected: `** BUILD SUCCEEDED **`.
 
-- [ ] **Step 5: Manual smoke test**
+- [ ] **Step 6: Manual smoke test**
 
-Run the app on the iPhone 17 simulator (install + launch as in prior session). Drop Na + Cl, open each reactant popover, enter quantities, confirm the panel shows `2Na + Cl₂ → 2NaCl`, a limiting reactant, yield, and excess. Confirm the diatomic notice appears for Cl.
+Run the app on the iPhone 17 simulator (install + launch as in prior session). Drop Na + Cl to complete bonding, tap **Stoichiometry** (diagram clears), open each reactant popover, enter quantities, confirm the panel shows `2Na + Cl₂ → 2NaCl`, a limiting reactant, yield, and excess. Confirm the diatomic notice appears for Cl.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add ChemInteractive/Views/Bridge/BridgeView.swift
@@ -573,6 +676,6 @@ git commit -m "feat: wire stoichiometry popover and result panel"
 
 ## Notes for the implementer
 
-- Tasks 1–2 are the contract; get them green before touching UI.
-- Task 5 is the only task that depends on existing-code details — read the named files first; the subscript sources (`crossoverModel`, `covalentStoich`) already exist and must be reused, not reimplemented.
+- Tasks 1–3 are pure/unit-tested (ChemCore); get them green before touching UI.
+- Task 6 is the only task that depends on existing-code details — read the named files first; the subscript sources (`crossoverModel`, `covalentStoich`) already exist and must be reused, not reimplemented.
 - `BridgeView`'s exact token views and result-display location are not reproduced here; follow the established layout and inject the two new views at the natural points.

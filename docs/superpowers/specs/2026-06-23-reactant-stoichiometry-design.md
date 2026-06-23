@@ -37,6 +37,12 @@ functions, no SwiftUI, fully unit-tested).
    the blank reactant is assumed present in exactly the amount required
    (stoichiometric to the entered one) → the entered reactant is limiting, no
    spurious excess. If both blank, use a 1-mol-of-reaction basis.
+6. **Distinct use case, started by a button.** Stoichiometry is its own use case,
+   not an always-on panel. Once bonding reaches `.complete` (and the product is
+   ionic/covalent, not metallic), a **Stoichiometry** button appears. Tapping it
+   **clears the bonding diagram** (Lewis/crossover) and switches to the
+   stoichiometry view: the two reactant tokens with their quantity popovers plus
+   the result panel. The two reactants persist across the switch.
 
 ## 3. Scope
 
@@ -66,9 +72,20 @@ ChemInteractive/Views/Bridge/
 ```
 
 The solver is a free function (plus small value types) in ChemCore. SwiftUI
-owns the transient quantity state locally in `BridgeView` (`@State`) — it is NOT
-added to `CanvasState` / `CanvasReducer`. Quantities need no replay/undo, so
-keeping them out of the reduced state keeps the bonding state machine untouched.
+owns the transient quantity state locally in `BridgeView` (`@State`) — quantity
+*values* are NOT added to `CanvasState`. They need no replay/undo.
+
+**The one state-machine touch — the mode transition.** Starting the
+stoichiometry use case clears the diagram and is genuine app state, so it lives
+in the reducer (consistent with `.crossoverComplete` / `.dismissExplanation`):
+
+- `CanvasPhase` gains `.stoichiometry`.
+- `CanvasAction` gains `.startStoichiometry`.
+- `canvasReducer` transitions `.complete` → `.stoichiometry` on that action,
+  preserving `slotA`, `slotB`, and `bondingType`.
+
+`BridgeView` renders the Lewis/crossover diagram in the bonding phases and the
+stoichiometry view (popovers + result panel, no diagram) in `.stoichiometry`.
 
 ### Data flow
 
@@ -195,7 +212,13 @@ On commit it produces a `ReactantEntry`. If the reactant symbol is diatomic, the
 popover shows the exclamation message inline and the value is interpreted as the
 X₂ amount (the engine handles the molar-mass doubling).
 
-**`BridgeView`** — holds `@State entryA, entryB: ReactantEntry?`. It resolves
+**Stoichiometry button** — shown in the `.complete` phase when
+`bondingType != .metallic`. Sends `.startStoichiometry`, which clears the diagram
+(reducer moves to `.stoichiometry`).
+
+**`BridgeView`** — switches on `canvasPhase`: bonding diagram in the bonding
+phases, stoichiometry view in `.stoichiometry`. It holds
+`@State entryA, entryB: ReactantEntry?`. It resolves
 each reactant's `atomicMass` from `PeriodicTable`, its `subscriptInProduct` from
 the already-computed product (ionic `cationSub/anionSub` via `crossoverModel`, or
 covalent `nA/nB` via `covalentStoich`), and the `isDiatomic` flag, then calls
@@ -239,9 +262,13 @@ Pure-function tests, no SwiftUI:
 
 - `ChemCore/Sources/ChemCore/Engine/Stoichiometry.swift` — NEW (solver + types)
 - `ChemCore/Tests/ChemCoreTests/StoichiometryTests.swift` — NEW
+- `ChemCore/Sources/ChemCore/State/Phase.swift` — EDIT (`.stoichiometry` phase)
+- `ChemCore/Sources/ChemCore/State/CanvasState.swift` — EDIT (`.startStoichiometry` action)
+- `ChemCore/Sources/ChemCore/State/CanvasReducer.swift` — EDIT (`.complete` → `.stoichiometry`)
+- `ChemCore/Tests/ChemCoreTests/CanvasReducerTests.swift` — EDIT (transition test)
 - `ChemInteractive/Views/Bridge/ReactantQuantityPopover.swift` — NEW
 - `ChemInteractive/Views/Bridge/StoichResultPanel.swift` — NEW
-- `ChemInteractive/Views/Bridge/BridgeView.swift` — EDIT (state + wiring)
+- `ChemInteractive/Views/Bridge/BridgeView.swift` — EDIT (button, phase switch, wiring)
 
 Diatomic set constant `naturallyDiatomic = ["H","N","O","F","Cl","Br","I"]`
 lives in `Stoichiometry.swift`.
