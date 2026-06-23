@@ -36,7 +36,7 @@ struct StoichResultPanel: View {
     }
 
     private func reactantTerm(_ label: String, slot: Slot, show: Binding<Bool>) -> some View {
-        Button { show.wrappedValue = true } label: { chipLabel(label) }
+        Button { SoundFX.reactant(); show.wrappedValue = true } label: { chipLabel(label) }
         .buttonStyle(.plain)
         .popover(isPresented: show) {
             ReactantDetailPopover(symbol: slot == .a ? symbolA : symbolB, slot: slot)
@@ -50,7 +50,7 @@ struct StoichResultPanel: View {
             Text("+").foregroundStyle(Theme.text.opacity(0.7))
             reactantTerm(term(e.coeffB, symbolB, e.molecularityB), slot: .b, show: $showDetailB)
             Text("→").foregroundStyle(Theme.text.opacity(0.7))
-            Button { showProduct = true } label: { chipLabel(rhs) }
+            Button { SoundFX.product(); showProduct = true } label: { chipLabel(rhs) }
             .buttonStyle(.plain)
             .popover(isPresented: $showProduct) {
                 ProductDetailPopover(result: result, productFormula: productFormula)
