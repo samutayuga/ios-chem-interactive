@@ -23,4 +23,70 @@ final class StoichiometryTests: XCTestCase {
         XCTAssertEqual(molecularity(isDiatomic: true), 2)
         XCTAssertEqual(molecularity(isDiatomic: false), 1)
     }
+
+    // MARK: - Task 2: solveStoichiometry
+
+    private func spec(_ sym: String, _ mass: Double, _ sub: Int, _ di: Bool,
+                      _ entry: ReactantEntry?) -> ReactantSpec {
+        ReactantSpec(symbol: sym, atomicMass: mass, subscriptInProduct: sub,
+                     isDiatomic: di, entry: entry)
+    }
+
+    func test_yield_water_stoichiometric() {
+        // 2 mol H₂ + 1 mol O₂ -> 2 mol H₂O ; masses H=1, O=16 -> product 18 g/mol
+        let h = spec("H", 1, 2, true, ReactantEntry(value: 2, unit: .mole))
+        let o = spec("O", 16, 1, true, ReactantEntry(value: 1, unit: .mole))
+        let r = solveStoichiometry(a: h, b: o)
+        XCTAssertEqual(r.limiting, .both)
+        XCTAssertEqual(r.yield.moles, 2, accuracy: 1e-9)
+        XCTAssertEqual(r.productMolarMass, 18, accuracy: 1e-9)
+        XCTAssertEqual(r.yield.mass, 36, accuracy: 1e-9)
+        XCTAssertEqual(r.excess.moles, 0, accuracy: 1e-9)
+    }
+
+    func test_excess_hydrogen() {
+        // 3 mol H₂ + 1 mol O₂ : extents 1.5 vs 1 -> O limiting, 1 mol H₂ left (2 g)
+        let h = spec("H", 1, 2, true, ReactantEntry(value: 3, unit: .mole))
+        let o = spec("O", 16, 1, true, ReactantEntry(value: 1, unit: .mole))
+        let r = solveStoichiometry(a: h, b: o)
+        XCTAssertEqual(r.limiting, .b)
+        XCTAssertEqual(r.yield.moles, 2, accuracy: 1e-9)
+        XCTAssertEqual(r.excess.moles, 1, accuracy: 1e-9)
+        XCTAssertEqual(r.excess.mass, 2, accuracy: 1e-9)   // 1 mol H₂ × 2 g/mol
+    }
+
+    func test_mass_unit_conversion() {
+        // 32 g O₂ = 1 mol O₂ ; pair with 4 mol H₂ -> O limiting, yield 2 mol H₂O
+        let h = spec("H", 1, 2, true, ReactantEntry(value: 4, unit: .mole))
+        let o = spec("O", 16, 1, true, ReactantEntry(value: 32, unit: .mass))
+        let r = solveStoichiometry(a: h, b: o)
+        XCTAssertEqual(r.limiting, .b)
+        XCTAssertEqual(r.yield.moles, 2, accuracy: 1e-9)
+    }
+
+    func test_blank_is_enough() {
+        // A entered, B blank -> A limiting, no excess
+        let h = spec("H", 1, 2, true, ReactantEntry(value: 2, unit: .mole))
+        let o = spec("O", 16, 1, true, nil)
+        let r = solveStoichiometry(a: h, b: o)
+        XCTAssertEqual(r.limiting, .a)
+        XCTAssertEqual(r.yield.moles, 2, accuracy: 1e-9)
+        XCTAssertEqual(r.excess.moles, 0, accuracy: 1e-9)
+    }
+
+    func test_both_blank_one_mol_basis() {
+        let h = spec("H", 1, 2, true, nil)
+        let o = spec("O", 16, 1, true, nil)
+        let r = solveStoichiometry(a: h, b: o)
+        XCTAssertEqual(r.limiting, .both)
+        XCTAssertEqual(r.yield.moles, 2, accuracy: 1e-9)   // coeffProduct × ξ(=1)
+    }
+
+    func test_diatomic_messages() {
+        let na = spec("Na", 23, 1, false, ReactantEntry(value: 1, unit: .mole))
+        let cl = spec("Cl", 35.45, 1, true, ReactantEntry(value: 1, unit: .mole))
+        let r = solveStoichiometry(a: na, b: cl)
+        XCTAssertEqual(r.diatomicMessages,
+                       ["Cl cannot exist as monoatomic, It only exist in Cl₂"])
+    }
 }
