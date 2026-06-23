@@ -8,7 +8,7 @@ struct ProductDetailPopover: View {
     let result: StoichResult
     let productFormula: String
 
-    private func fmt(_ v: Double) -> String { String(format: "%.3g", v) }
+    private func fmt(_ v: Double) -> String { String(format: "%.2f", v) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {

@@ -144,7 +144,7 @@ struct DropZoneView: View {
     /// During the stoichiometry phase: show the entered amount (the knob is the cue to set it).
     @ViewBuilder private var quantityCue: some View {
         if let q = model.quantity(for: slot) {
-            Text("\(q.value, specifier: "%.3g") \(q.unit == .mole ? "mol" : "g")")
+            Text("\(q.value, specifier: "%.2f") \(q.unit == .mole ? "mol" : "g")")
                 .font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
         }
     }
