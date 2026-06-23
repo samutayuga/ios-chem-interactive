@@ -6,6 +6,7 @@ public enum CanvasPhase: Equatable, Sendable {
     case showingCovalent
     case showingMetallic
     case complete
+    case stoichiometry
 }
 
 public enum Slot: Equatable {
