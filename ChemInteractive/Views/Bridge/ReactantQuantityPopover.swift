@@ -7,25 +7,12 @@ import ChemCore
 struct ReactantQuantityPopover: View {
     let symbol: String
     @Binding var entry: ReactantEntry?
-    /// This reactant's slot and the current solved result, used to show the
-    /// per-reactant detail (role + yield) inside the popover. Optional so the
-    /// view still works as a plain quantity editor.
-    var slot: Slot? = nil
-    var result: StoichResult? = nil
-    var productFormula: String = ""
 
     @State private var text: String = ""
     @State private var unit: QuantityUnit = .mole
     @FocusState private var fieldFocused: Bool
 
     private var isDiatomic: Bool { naturallyDiatomic.contains(symbol) }
-
-    private func fmt(_ v: Double) -> String { String(format: "%.3g", v) }
-
-    private var isLimiting: Bool {
-        guard let r = result, let slot else { return false }
-        return (slot == .a && r.limiting == .a) || (slot == .b && r.limiting == .b)
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -59,7 +46,6 @@ struct ReactantQuantityPopover: View {
                 Text("\(symbol) cannot exist as monoatomic, It only exist in \(symbol)₂")
                     .font(.caption2).foregroundStyle(.orange)
             }
-            detailSection
         }
         .padding(12)
         .frame(width: 240)
@@ -69,25 +55,6 @@ struct ReactantQuantityPopover: View {
             if let e = entry { text = trimmed(e.value); unit = e.unit }
             // Defer a tick so focus lands after the popover finishes presenting.
             DispatchQueue.main.async { fieldFocused = true }
-        }
-    }
-
-    /// Per-reactant result: its role in the reaction + the theoretical yield.
-    @ViewBuilder private var detailSection: some View {
-        if let r = result {
-            Divider().overlay(Theme.accent.opacity(0.3))
-            if r.limiting == .both {
-                Text("Stoichiometric — fully consumed")
-                    .font(.caption2).foregroundStyle(Theme.text)
-            } else if isLimiting {
-                Text("Limiting reactant")
-                    .font(.caption2.weight(.semibold)).foregroundStyle(Theme.accent)
-            } else {
-                Text("Excess: \(fmt(r.excess.moles)) mol (\(fmt(r.excess.mass)) g) left over")
-                    .font(.caption2).foregroundStyle(Theme.text)
-            }
-            Text("Yield: \(fmt(r.yield.moles)) mol (\(fmt(r.yield.mass)) g) \(productFormula)")
-                .font(.caption2).foregroundStyle(Theme.text)
         }
     }
 

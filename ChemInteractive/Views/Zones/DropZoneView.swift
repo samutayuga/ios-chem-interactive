@@ -88,10 +88,7 @@ struct DropZoneView: View {
             ReactantQuantityPopover(
                 symbol: zone?.symbol ?? "",
                 entry: Binding(get: { model.quantity(for: slot) },
-                               set: { model.setQuantity($0, for: slot) }),
-                slot: slot,
-                result: model.stoichResult,
-                productFormula: model.productFormula
+                               set: { model.setQuantity($0, for: slot) })
             )
         }
         .dropDestination(for: TokenTransfer.self) { items, _ in

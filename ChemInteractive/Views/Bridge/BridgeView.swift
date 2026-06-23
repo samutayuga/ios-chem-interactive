@@ -66,7 +66,7 @@ struct BridgeView: View {
             case .stoichiometry:
                 if let a = state.slotA, let b = state.slotB, let result = model.stoichResult {
                     VStack(spacing: 12) {
-                        Text("Tap a flask to set its amount; tap again for detail")
+                        Text("Tap a flask to set its amount; tap a reactant in the equation for detail")
                             .font(.caption2).foregroundStyle(Theme.text.opacity(0.7))
                             .multilineTextAlignment(.center)
                         StoichResultPanel(result: result, symbolA: a.symbol, symbolB: b.symbol,
