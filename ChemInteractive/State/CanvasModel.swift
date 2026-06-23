@@ -65,6 +65,11 @@ final class CanvasModel {
     }
 
     func select(_ token: TokenTransfer) {
+        // Picking an element from the stoichiometry view returns to the bonding
+        // feature: reset to the initial state, then carry the new selection.
+        if state.canvasPhase == .stoichiometry {
+            send(.reset)
+        }
         selectedToken = (selectedToken == token) ? nil : token
     }
 

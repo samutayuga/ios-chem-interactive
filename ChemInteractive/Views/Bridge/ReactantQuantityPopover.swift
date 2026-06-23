@@ -12,8 +12,6 @@ struct ReactantQuantityPopover: View {
     @State private var unit: QuantityUnit = .mole
     @FocusState private var fieldFocused: Bool
 
-    private var isDiatomic: Bool { naturallyDiatomic.contains(symbol) }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Quantity of \(symbol)").font(.caption.weight(.semibold))
@@ -41,10 +39,6 @@ struct ReactantQuantityPopover: View {
                 .pickerStyle(.segmented)
                 .frame(width: 88)
                 .onChange(of: unit) { _, _ in sync() }
-            }
-            if isDiatomic {
-                Text("\(symbol) cannot exist as monoatomic, It only exist in \(symbol)₂")
-                    .font(.caption2).foregroundStyle(.orange)
             }
         }
         .padding(12)

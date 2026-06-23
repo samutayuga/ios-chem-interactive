@@ -13,7 +13,7 @@ struct ProductDetailPopover: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(productFormula).font(.caption.weight(.semibold))
-            Text("Theoretical yield: \(fmt(result.yield.moles)) mol (\(fmt(result.yield.mass)) g)")
+            Text("Yield: \(fmt(result.yield.moles)) mol (\(fmt(result.yield.mass)) g)")
                 .font(.caption2).foregroundStyle(Theme.text)
             if result.limiting == .both {
                 Text("Reactants fully consumed (stoichiometric)")

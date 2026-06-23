@@ -25,8 +25,10 @@ struct ReactantDetailPopover: View {
             }
 
             if naturallyDiatomic.contains(symbol) {
-                Text("\(symbol) cannot exist as monoatomic, It only exist in \(symbol)₂")
+                Text("\(symbol) cannot exist as monoatomic, it only exists as \(symbol)₂")
                     .font(.caption2).foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
             }
         }
         .padding(12)
