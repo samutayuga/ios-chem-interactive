@@ -1,12 +1,13 @@
 // ChemInteractive/Theme/SoundFX.swift
 import AudioToolbox
+import UIKit
 
-/// Tiny UI sound effects using built-in iOS system sounds — no bundled audio
-/// assets. Used when tapping a reactant or product term in the stoichiometry
-/// equation.
+/// Tiny UI sound/haptic effects using built-in iOS system sounds — no bundled
+/// audio assets.
 enum SoundFX {
-    /// Reactant tap — a soft "tock".
-    static func reactant() { AudioServicesPlaySystemSound(1104) }
-    /// Product tap — a brighter "tink".
-    static func product() { AudioServicesPlaySystemSound(1057) }
+    /// Fires when both reactants have an amount — the reaction "happens".
+    static func reaction() {
+        AudioServicesPlaySystemSound(1025)   // tri-tone completion cue
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
 }

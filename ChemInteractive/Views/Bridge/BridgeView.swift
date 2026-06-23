@@ -3,8 +3,19 @@ import ChemCore
 
 struct BridgeView: View {
     @Environment(CanvasModel.self) private var model
+    @State private var reactionPulse = false
 
     private var state: CanvasState { model.state }
+    private var bothQuantitiesSet: Bool { model.quantityA != nil && model.quantityB != nil }
+
+    /// Both reactants now have an amount → fire the reaction sound + burst.
+    private func fireReaction() {
+        SoundFX.reaction()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) { reactionPulse = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+            withAnimation(.easeOut(duration: 0.3)) { reactionPulse = false }
+        }
+    }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -68,7 +79,12 @@ struct BridgeView: View {
                     VStack(spacing: 12) {
                         StoichResultPanel(result: result, symbolA: a.symbol, symbolB: b.symbol,
                                           productFormula: model.productFormula)
+                            .scaleEffect(reactionPulse ? 1.06 : 1)
+                            .overlay { if reactionPulse { ReactionBurst() } }
                         ResetButton { model.send(.reset) }
+                    }
+                    .onChange(of: bothQuantitiesSet) { _, set in
+                        if set { fireReaction() }
                     }
                 }
 
