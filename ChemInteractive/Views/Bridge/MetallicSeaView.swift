@@ -29,6 +29,7 @@ struct MetallicSeaView: View {
                     .font(.system(size: 20, weight: .bold)).foregroundStyle(.white)
                 Text(homo ? "Pure metal · metallic bond" : "Alloy · metallic bond")
                     .font(.system(size: 9)).tracking(1).foregroundStyle(.white.opacity(0.7))
+                ProductStateBadge(state: predictProductState(bonding: .metallic, a: slotA, b: slotB))
             }
             ZStack {
                 ForEach(Array(ionPositions.enumerated()), id: \.offset) { i, pos in

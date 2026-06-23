@@ -37,6 +37,8 @@ struct BridgeView: View {
                                                    elements: model.elements, ions: model.polyatomicIons))
                                 .font(.system(size: 14)).foregroundStyle(Theme.text)
                                 .multilineTextAlignment(.center)
+                            ProductStateBadge(state: predictProductState(bonding: .ionic,
+                                                                         a: pair.cation, b: pair.anion))
                         }
                         BondingDiagramView(cation: pair.cation, anion: pair.anion)
                         ResetButton { model.send(.reset) }

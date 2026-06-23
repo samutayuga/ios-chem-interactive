@@ -27,7 +27,7 @@ struct SubstanceFill: View {
 
     var body: some View {
         layer
-            .clipShape(MeasuringCylinderShape())
+            .clipShape(PotionFlaskShape())
             .onAppear { withAnimation(.easeOut(duration: 0.5)) { appeared = true } }
     }
 

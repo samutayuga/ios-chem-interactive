@@ -6,8 +6,9 @@ elements (or a polyatomic ion) together and the app classifies the bond — **io
 result diagram: an ionic crossover + Lewis electron‑transfer, a covalent Lewis structure,
 or a metallic electron‑sea. Tapping an element opens a detail card (notation, group/
 period, electron config, oxidation states) and highlights its group + period; drop
-zones are graduated cylinders whose fill animates by state of matter (solid/liquid/
-gas/aqueous); results show the compound name and a tappable bond explanation.
+zones are bubbling potion flasks whose fill animates by state of matter (solid/liquid/
+gas/aqueous); results show the compound name, a heuristic product state‑of‑matter badge
+(solid/liquid/gas), and a tappable bond explanation.
 
 It is a pure‑Swift port of an existing React + Rust/WASM app. **No WebAssembly, FFI, or JS
 bridge ships in the binary** — the chemistry domain logic was ported from the Rust
@@ -16,7 +17,7 @@ bridge ships in the binary** — the chemistry domain logic was ported from the 
 
 - **Platform:** iOS 17.0+, portrait iPhone.
 - **Language:** Swift 5 language mode, SwiftUI.
-- **Tests:** 71 in `ChemCore` + 68 in the app target, all command‑line runnable.
+- **Tests:** 79 in `ChemCore` + 68 in the app target, all command‑line runnable.
 
 ---
 
@@ -164,6 +165,7 @@ The teaching logic that lives in the React app (not in Rust). All pure functions
 | Bond classification | `determineBonding(_:_:)` + `bondingType(…)` (see decision tree below) | `Engine/Bonding.swift` |
 | Covalent stoichiometry | `calcStoich(veA:veB:) -> (nA, nB, bondOrder)` from octet/duet bonds‑needed and their gcd; `covalentStoich(veA:groupA:periodA:veB:groupB:periodB:)` wraps it with the **orbital‑mismatch rule** (below); `isOrbitalMismatchDoubleBond(…)` is the rule predicate; `iupacFirst(_:_:)` orders binary formulas by electronegativity | `Engine/CovalentStoich.swift` |
 | Metallic count | `metallicElectronCount(veA:veB:poolSize:)` = `min(3·veA + 3·veB, 12)` delocalised electrons | `Engine/Metallic.swift` |
+| Product state | `predictProductState(bonding:a:b:) -> ProductState` — **heuristic** standard‑state of the product: ionic/metallic → solid; covalent estimated from constituents' `stateOfMatter` (any gas → gas, else any liquid → liquid, else solid; H₂O special‑cased liquid). Approximate, for the result badge | `Engine/ProductState.swift` |
 | Math | `gcd(_:_:)` (Euclidean) | `Engine/MathUtil.swift` |
 
 **Orbital‑mismatch double‑bond rule** (`covalentStoich` / `isOrbitalMismatchDoubleBond`). Two
@@ -213,7 +215,7 @@ stateDiagram-v2
 | `CanvasPhase` | `selecting → slotAFilled → explaining → animatingCrossover / showingCovalent / showingMetallic → complete` | `State/Phase.swift` |
 | `Slot` | `.a` / `.b`, with `.other` | `State/Phase.swift` |
 | `ZoneStatus` | `.neutral` / `.deducing` / `.ionized` | `State/Phase.swift` |
-| `ZoneState` | a filled slot: symbol, `elementClass`, `isPolyatomic`, `isTransition`, `valenceElectrons`, `oxidationStates`, `derivedCharge`, `status`, `group`, `period`. Built from an `Element` (carries `group`/`period`) or a `PolyatomicIon` (`group`/`period` default `0`). `group`/`period` feed the covalent orbital‑mismatch rule | `State/ZoneState.swift` |
+| `ZoneState` | a filled slot: symbol, `elementClass`, `isPolyatomic`, `isTransition`, `valenceElectrons`, `oxidationStates`, `derivedCharge`, `status`, `group`, `period`, `stateOfMatter`. Built from an `Element` (carries `group`/`period`/`stateOfMatter`) or a `PolyatomicIon` (defaults). `group`/`period` feed the orbital‑mismatch rule; `stateOfMatter` feeds the product‑state badge | `State/ZoneState.swift` |
 | `PolyatomicIon` | the 6 hard‑coded ions (OH⁻, NO₃⁻, SO₄²⁻, CO₃²⁻, PO₄³⁻, NH₄⁺) | `State/PolyatomicIon.swift` |
 | `CanvasState` | `{ canvasPhase, bondingType?, slotA?, slotB? }`, plus `.initial` | `State/CanvasState.swift` |
 | `CanvasAction` | `dropElement(slot:zone:)`, `pickTMCharge(slot:charge:)`, `dismissExplanation`, `replaceElement(slot:)`, `crossoverComplete`, `reset` | `State/CanvasState.swift` |
@@ -329,18 +331,20 @@ flowchart TB
 
 **Zones — `Views/Zones/`:**
 
-- `DropZoneView` — a slot rendered as a **graduated measuring cylinder**
-  (`MeasuringCylinder.swift`: `MeasuringCylinderShape` + `GraduationTicks`, with a
-  static "mL" label). Accepts a drop via `.dropDestination(for: TokenTransfer.self)`
-  → `model.place(token, in: slot)`; a pending tap‑selection places by tapping the
-  zone. Empty + idle shows a droplet icon; with a pending selection it shows the
-  symbol + a `hand.tap` cue. A `×` clear button dispatches `.replaceElement`. Slot A
-  cation‑green, Slot B anion‑pink; `.contentShape`/gestures bound to the cylinder.
+- `DropZoneView` — a slot rendered as a **bubbling potion flask**
+  (`PotionFlask.swift`: `PotionFlaskShape` round‑bottom flask + `PotionBubbles`
+  time‑driven rising bubbles), with an accent glow halo behind the bulb. Accepts a
+  drop via `.dropDestination(for: TokenTransfer.self)` → `model.place(token, in: slot)`;
+  a pending tap‑selection places by tapping the zone. Empty + idle shows a `sparkles`
+  icon; with a pending selection it shows the symbol + a `hand.tap` cue; a filled slot
+  shows the element symbol centered in the bulb. A `×` clear button dispatches
+  `.replaceElement`. Slot A cation‑green, Slot B anion‑pink; `.contentShape`/gestures
+  bound to the flask.
 - `SubstanceFill` (`SubstanceFill.swift`) — the occupied‑slot fill, animated by
   state of matter (`resolveSubstanceState`: element `raw.state`, ions → aqueous):
   **solid** chunk drops + settles, **liquid** rises with a wave, **gas** bubbles
   rise (`TimelineView`+`Canvas`), **aqueous** liquid + dispersing dots. Tinted by
-  `elementClassColor`; clipped to the cylinder; restarts on element change.
+  `elementClassColor`; clipped to the flask (`PotionFlaskShape`); restarts on element change.
 - `TransitionMetalPickerView` — a button per positive oxidation state; tapping dispatches
   `.pickTMCharge`. Rendered inline in the explanation modal when a slot is `.deducing`.
 
@@ -366,6 +370,12 @@ flowchart TB
 - `BridgeView` — the **phase router**. Shows the `⇌` glyph always and switches on
   `state.canvasPhase` to render the right result view (formula + name **above** the
   Lewis‑dot diagram, consistently). Reset buttons (`ResetButton.swift`) dispatch `.reset`.
+- `ProductStateBadge` (`ProductStateBadge.swift`) — a small pill under each result's
+  compound name showing `ChemCore.predictProductState` (solid/liquid/gas). The state is
+  a tiny **kinetic‑theory particle animation** with no text (`StateParticles`: solid =
+  lattice vibrating in place, liquid = packed particles flowing, gas = few bouncing
+  freely), tinted per state. Wired into all three result views (ionic in `BridgeView`,
+  covalent in `CovalentLewisView`, metallic in `MetallicSeaView`).
 
 ### Cation/anion ordering
 

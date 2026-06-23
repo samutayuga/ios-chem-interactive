@@ -36,44 +36,45 @@ struct DropZoneView: View {
         .frame(maxWidth: .infinity, minHeight: 96)
     }
 
-    // Graduated measuring cylinder: liquid → graduations → outline → mL label →
-    // centered contents, all inside one aspect-constrained container that also
-    // owns the hit-test shape and the drop/tap gestures.
+    // Bubbling potion flask: glow halo → liquid fill → rising bubbles → glass
+    // outline → contents in the bulb, all inside one aspect-constrained container
+    // that also owns the hit-test shape and the drop/tap gestures.
     private var cylinder: some View {
         ZStack {
+            // Soft glow halo behind the bulb; intensifies when targeted/selectable.
+            PotionFlaskShape()
+                .fill(accent.opacity(highlighted ? 0.28 : 0.12))
+                .blur(radius: highlighted ? 14 : 9)
+
             if let zone {
                 SubstanceFill(state: resolveSubstanceState(for: zone, elements: model.elements),
                               color: elementClassColor(zone.elementClass),
                               fill: liquidFill)
                     .id(zone.symbol)   // restart the entrance animation when the element changes
             }
-            GraduationTicks()
-                .stroke(accent.opacity(0.35), lineWidth: 1)
-                .clipShape(MeasuringCylinderShape())
-            MeasuringCylinderShape()
-                .stroke(accent.opacity(highlighted ? 1 : 0.4), lineWidth: highlighted ? 3 : 2)
 
-            // Static unit label near the top rim.
-            VStack {
-                HStack {
-                    Text("mL").font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(accent.opacity(0.7))
-                    Spacer()
-                }
-                Spacer()
-            }
-            .padding(.top, 6).padding(.leading, 10)
+            // Bubbles always simmer for the potion vibe; tinted by contents when filled.
+            PotionBubbles(color: zone != nil ? elementClassColor(zone!.elementClass) : accent)
+                .clipShape(PotionFlaskShape())
+                .opacity(0.9)
 
-            // Contents float in the upper region, centered horizontally.
-            VStack {
-                content.frame(maxWidth: .infinity).padding(.top, 28)
-                Spacer()
+            // Glass: a faint inner sheen fill + the rim/wall outline.
+            PotionFlaskShape()
+                .fill(accent.opacity(0.05))
+            PotionFlaskShape()
+                .stroke(accent.opacity(highlighted ? 1 : 0.45), lineWidth: highlighted ? 3 : 2)
+
+            // Contents sit in the bulb, centered.
+            GeometryReader { geo in
+                content
+                    .frame(maxWidth: .infinity)
+                    .position(x: geo.size.width * 0.5, y: geo.size.height * 0.66)
             }
-            .padding(8)
+            .padding(.horizontal, 6)
         }
-        .aspectRatio(0.6, contentMode: .fit)   // measuring cylinder (a touch wider)
+        .aspectRatio(0.6, contentMode: .fit)
         .frame(maxWidth: .infinity)
-        .contentShape(MeasuringCylinderShape())
+        .contentShape(PotionFlaskShape())
         .onTapGesture {
             if let token = model.selectedToken, !dropDisabled { model.place(token, in: slot) }
         }
@@ -101,11 +102,10 @@ struct DropZoneView: View {
                     .font(.system(size: 16)).foregroundStyle(accent.opacity(0.8))
             }
         } else {
-            // Empty + idle: a droplet icon cues "drop / pour here", shifted down.
-            Image(systemName: "drop")
+            // Empty + idle: sparkles cue "drop / brew here".
+            Image(systemName: "sparkles")
                 .font(.system(size: 24))
                 .foregroundStyle(accent.opacity(0.6))
-                .padding(.top, 6)
         }
     }
 }
