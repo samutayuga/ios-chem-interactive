@@ -5,9 +5,11 @@ struct DropZoneView: View {
     let slot: Slot
     @Environment(CanvasModel.self) private var model
     @State private var isTargeted = false
+    @State private var showQuantityPopover = false
 
     private var zone: ChemCore.ZoneState? { slot == .a ? model.state.slotA : model.state.slotB }
     private var phase: ChemCore.CanvasPhase { model.state.canvasPhase }
+    private var settingQuantity: Bool { phase == .stoichiometry && zone != nil }
     private var dropDisabled: Bool { phase == .animatingCrossover || phase == .explaining }
     private var showReplace: Bool { zone != nil && phase != .animatingCrossover }
     private var accent: Color { slot == .a ? Theme.cation : Theme.anion }
@@ -76,7 +78,18 @@ struct DropZoneView: View {
         .frame(maxWidth: .infinity)
         .contentShape(PotionFlaskShape())
         .onTapGesture {
-            if let token = model.selectedToken, !dropDisabled { model.place(token, in: slot) }
+            if settingQuantity {
+                showQuantityPopover = true
+            } else if let token = model.selectedToken, !dropDisabled {
+                model.place(token, in: slot)
+            }
+        }
+        .popover(isPresented: $showQuantityPopover) {
+            ReactantQuantityPopover(
+                symbol: zone?.symbol ?? "",
+                entry: Binding(get: { model.quantity(for: slot) },
+                               set: { model.setQuantity($0, for: slot) })
+            )
         }
         .dropDestination(for: TokenTransfer.self) { items, _ in
             guard !dropDisabled, let token = items.first else { return false }
@@ -87,12 +100,15 @@ struct DropZoneView: View {
 
     @ViewBuilder private var content: some View {
         if let zone {
-            if zone.status == .ionized, let charge = zone.derivedCharge {
-                Text(formatIon(symbol: zone.symbol, charge: charge))
-                    .font(.system(size: 30, weight: .bold)).foregroundStyle(accent)
-            } else {
-                Text(zone.symbol)
-                    .font(.system(size: 24, weight: .bold)).foregroundStyle(accent)
+            VStack(spacing: 3) {
+                if zone.status == .ionized, let charge = zone.derivedCharge {
+                    Text(formatIon(symbol: zone.symbol, charge: charge))
+                        .font(.system(size: 30, weight: .bold)).foregroundStyle(accent)
+                } else {
+                    Text(zone.symbol)
+                        .font(.system(size: 24, weight: .bold)).foregroundStyle(accent)
+                }
+                if settingQuantity { quantityCue }
             }
         } else if hasPendingSelection {
             VStack(spacing: 4) {
@@ -106,6 +122,17 @@ struct DropZoneView: View {
             Image(systemName: "sparkles")
                 .font(.system(size: 24))
                 .foregroundStyle(accent.opacity(0.6))
+        }
+    }
+
+    /// During the stoichiometry phase: show the entered amount, or a tap-to-set cue.
+    @ViewBuilder private var quantityCue: some View {
+        if let q = model.quantity(for: slot) {
+            Text("\(q.value, specifier: "%.3g") \(q.unit == .mole ? "mol" : "g")")
+                .font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
+        } else {
+            Text("tap to set")
+                .font(.system(size: 10)).foregroundStyle(accent.opacity(0.8))
         }
     }
 }

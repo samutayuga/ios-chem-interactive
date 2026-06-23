@@ -4,11 +4,6 @@ import ChemCore
 struct BridgeView: View {
     @Environment(CanvasModel.self) private var model
 
-    @State private var entryA: ReactantEntry?
-    @State private var entryB: ReactantEntry?
-    @State private var showPopoverA = false
-    @State private var showPopoverB = false
-
     private var state: CanvasState { model.state }
 
     var body: some View {
@@ -71,14 +66,12 @@ struct BridgeView: View {
             case .stoichiometry:
                 if let a = state.slotA, let b = state.slotB,
                    let subs = productSubscripts(a, b),
-                   let specA = reactantSpec(a, subscriptInProduct: subs.0, entry: entryA),
-                   let specB = reactantSpec(b, subscriptInProduct: subs.1, entry: entryB) {
+                   let specA = reactantSpec(a, subscriptInProduct: subs.0, entry: model.quantity(for: .a)),
+                   let specB = reactantSpec(b, subscriptInProduct: subs.1, entry: model.quantity(for: .b)) {
                     let result = solveStoichiometry(a: specA, b: specB)
                     VStack(spacing: 12) {
-                        HStack(spacing: 16) {
-                            reactantChip(a.symbol, show: $showPopoverA, entry: $entryA)
-                            reactantChip(b.symbol, show: $showPopoverB, entry: $entryB)
-                        }
+                        Text("Set an amount on each flask above")
+                            .font(.caption2).foregroundStyle(Theme.text.opacity(0.7))
                         StoichResultPanel(result: result, symbolA: a.symbol, symbolB: b.symbol,
                                           productFormula: productFormula(a, b))
                         ResetButton { model.send(.reset) }
@@ -90,12 +83,6 @@ struct BridgeView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .top)
-        .onChange(of: state.canvasPhase) { _, newPhase in
-            if newPhase == .selecting || newPhase == .slotAFilled {
-                entryA = nil; entryB = nil
-                showPopoverA = false; showPopoverB = false
-            }
-        }
     }
 
     // MARK: - Helpers
@@ -156,27 +143,6 @@ struct BridgeView: View {
                 : "\(fst)\(fstN > 1 ? subscriptGlyphs(fstN) : "")\(snd)\(sndN > 1 ? subscriptGlyphs(sndN) : "")"
         default:
             return ""
-        }
-    }
-
-    @ViewBuilder
-    private func reactantChip(_ symbol: String, show: Binding<Bool>,
-                              entry: Binding<ReactantEntry?>) -> some View {
-        Button { show.wrappedValue = true } label: {
-            VStack(spacing: 2) {
-                Text(symbol).font(.system(size: 20, weight: .bold)).foregroundStyle(.white)
-                if let e = entry.wrappedValue {
-                    Text("\(e.value, specifier: "%.3g") \(e.unit == .mole ? "mol" : "g")")
-                        .font(.caption2).foregroundStyle(Theme.text)
-                } else {
-                    Text("tap to set").font(.caption2).foregroundStyle(Theme.text.opacity(0.6))
-                }
-            }
-            .padding(10)
-            .background(Theme.accent.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
-        }
-        .popover(isPresented: show) {
-            ReactantQuantityPopover(symbol: symbol, entry: entry)
         }
     }
 
