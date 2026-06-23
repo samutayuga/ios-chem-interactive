@@ -35,6 +35,9 @@ struct ReactantQuantityPopover: View {
             }
         }
         .padding(12)
+        .frame(width: 220)
+        .fixedSize(horizontal: false, vertical: true)
+        .presentationCompactAdaptation(.popover)
         .onAppear {
             if let e = entry { text = trimmed(e.value); unit = e.unit }
         }
