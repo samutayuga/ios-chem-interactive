@@ -1,5 +1,11 @@
 import ChemCore
 
+/// How much of one reactant the reaction uses, and what is left over.
+struct ReactantOutcome {
+    let consumed: AmountResult
+    let remaining: AmountResult?   // non-nil only when this reactant is in excess
+}
+
 /// Stoichiometry derived from the current slots + per-slot quantities. Centralised
 /// here so the bridge (equation) and the reactant popovers (per-reactant detail)
 /// read one source of truth. Reuses the same product subscripts the diagrams use.
@@ -33,6 +39,24 @@ extension CanvasModel {
         default:
             return nil
         }
+    }
+
+    /// Per-reactant consumed amount (and leftover, if in excess) for the current reaction.
+    func reactantOutcome(for slot: Slot) -> ReactantOutcome? {
+        guard let r = stoichResult, let a = state.slotA, let b = state.slotB else { return nil }
+        let zone = slot == .a ? a : b
+        let coeff = slot == .a ? r.equation.coeffA : r.equation.coeffB
+        let molec = slot == .a ? r.equation.molecularityA : r.equation.molecularityB
+        guard let am = atomicMass(zone.symbol) else { return nil }
+        let unitMass = Double(molec) * am
+        // Reaction extent ξ: yield.moles = coeffProduct · ξ.
+        let xi = r.yield.moles / Double(r.equation.coeffProduct)
+        let consumedMoles = Double(coeff) * xi
+        let consumed = AmountResult(moles: consumedMoles, mass: consumedMoles * unitMass)
+        let isLimiting = (slot == .a && r.limiting == .a) || (slot == .b && r.limiting == .b)
+        let remaining: AmountResult? =
+            (r.limiting != .both && !isLimiting && r.excess.moles > 0) ? r.excess : nil
+        return ReactantOutcome(consumed: consumed, remaining: remaining)
     }
 
     /// The solved stoichiometry for the current reaction, or nil when not applicable.

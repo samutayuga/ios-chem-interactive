@@ -3,36 +3,26 @@ import SwiftUI
 import ChemCore
 
 /// Small popover shown when a reactant term in the balanced equation is tapped.
-/// Reports that reactant's role in the reaction and the theoretical yield.
+/// Reports how much of that reactant the reaction consumes, plus any leftover.
 struct ReactantDetailPopover: View {
+    @Environment(CanvasModel.self) private var model
     let symbol: String
     let slot: Slot
-    let result: StoichResult
-    let productFormula: String
 
     private func fmt(_ v: Double) -> String { String(format: "%.3g", v) }
-
-    private var isLimiting: Bool {
-        (slot == .a && result.limiting == .a) || (slot == .b && result.limiting == .b)
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(symbol).font(.caption.weight(.semibold))
 
-            if result.limiting == .both {
-                Text("Stoichiometric — fully consumed")
+            if let o = model.reactantOutcome(for: slot) {
+                Text("Consumed: \(fmt(o.consumed.moles)) mol (\(fmt(o.consumed.mass)) g)")
                     .font(.caption2).foregroundStyle(Theme.text)
-            } else if isLimiting {
-                Text("Limiting reactant")
-                    .font(.caption2.weight(.semibold)).foregroundStyle(Theme.accent)
-            } else {
-                Text("Excess: \(fmt(result.excess.moles)) mol (\(fmt(result.excess.mass)) g) left over")
-                    .font(.caption2).foregroundStyle(Theme.text)
+                if let rem = o.remaining {
+                    Text("Remaining: \(fmt(rem.moles)) mol (\(fmt(rem.mass)) g)")
+                        .font(.caption2).foregroundStyle(Theme.accent)
+                }
             }
-
-            Text("Yield: \(fmt(result.yield.moles)) mol (\(fmt(result.yield.mass)) g) \(productFormula)")
-                .font(.caption2).foregroundStyle(Theme.text)
 
             if naturallyDiatomic.contains(symbol) {
                 Text("\(symbol) cannot exist as monoatomic, It only exist in \(symbol)₂")

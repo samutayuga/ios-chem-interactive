@@ -38,6 +38,9 @@ public enum LimitingSide: Equatable, Sendable { case a, b, both }
 public struct AmountResult: Equatable, Sendable {
     public let moles: Double
     public let mass: Double
+    public init(moles: Double, mass: Double) {
+        self.moles = moles; self.mass = mass
+    }
 }
 
 public struct StoichResult: Equatable, Sendable {

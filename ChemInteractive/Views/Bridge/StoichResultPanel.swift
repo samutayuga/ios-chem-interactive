@@ -13,6 +13,7 @@ struct StoichResultPanel: View {
 
     @State private var showDetailA = false
     @State private var showDetailB = false
+    @State private var showProduct = false
 
     private func term(_ coeff: Int, _ sym: String, _ molecularity: Int) -> String {
         let unit = molecularity == 2 ? "\(sym)₂" : sym
@@ -30,8 +31,7 @@ struct StoichResultPanel: View {
         }
         .buttonStyle(.plain)
         .popover(isPresented: show) {
-            ReactantDetailPopover(symbol: slot == .a ? symbolA : symbolB, slot: slot,
-                                  result: result, productFormula: productFormula)
+            ReactantDetailPopover(symbol: slot == .a ? symbolA : symbolB, slot: slot)
         }
     }
 
@@ -42,7 +42,13 @@ struct StoichResultPanel: View {
             Text("+")
             reactantTerm(term(e.coeffB, symbolB, e.molecularityB), slot: .b, show: $showDetailB)
             Text("→")
-            Text(rhs)
+            Button { showProduct = true } label: {
+                Text(rhs).underline().foregroundStyle(Theme.accent)
+            }
+            .buttonStyle(.plain)
+            .popover(isPresented: $showProduct) {
+                ProductDetailPopover(result: result, productFormula: productFormula)
+            }
         }
         .font(.callout.weight(.semibold))
         .lineLimit(1)

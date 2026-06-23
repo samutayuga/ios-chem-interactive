@@ -36,6 +36,31 @@ struct DropZoneView: View {
             }
         }
         .frame(maxWidth: .infinity, minHeight: 96)
+        .overlay(alignment: .top) {
+            if settingQuantity { quantityKnob }
+        }
+    }
+
+    /// A knob on the flask neck during the stoichiometry phase; opens the
+    /// quantity input. Replaces a textual "tap the flask" hint.
+    private var quantityKnob: some View {
+        Button { showQuantityPopover = true } label: {
+            Image(systemName: "slider.horizontal.3")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 30, height: 30)
+                .background(accent, in: Circle())
+                .overlay(Circle().stroke(.white.opacity(0.75), lineWidth: 1.5))
+                .shadow(radius: 3)
+        }
+        .offset(y: -4)
+        .popover(isPresented: $showQuantityPopover) {
+            ReactantQuantityPopover(
+                symbol: zone?.symbol ?? "",
+                entry: Binding(get: { model.quantity(for: slot) },
+                               set: { model.setQuantity($0, for: slot) })
+            )
+        }
     }
 
     // Bubbling potion flask: glow halo → liquid fill → rising bubbles → glass
@@ -75,21 +100,12 @@ struct DropZoneView: View {
             .padding(.horizontal, 6)
         }
         .aspectRatio(0.6, contentMode: .fit)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: 150)
         .contentShape(PotionFlaskShape())
         .onTapGesture {
-            if settingQuantity {
-                showQuantityPopover = true
-            } else if let token = model.selectedToken, !dropDisabled {
+            if !settingQuantity, let token = model.selectedToken, !dropDisabled {
                 model.place(token, in: slot)
             }
-        }
-        .popover(isPresented: $showQuantityPopover) {
-            ReactantQuantityPopover(
-                symbol: zone?.symbol ?? "",
-                entry: Binding(get: { model.quantity(for: slot) },
-                               set: { model.setQuantity($0, for: slot) })
-            )
         }
         .dropDestination(for: TokenTransfer.self) { items, _ in
             guard !dropDisabled, let token = items.first else { return false }
@@ -125,14 +141,11 @@ struct DropZoneView: View {
         }
     }
 
-    /// During the stoichiometry phase: show the entered amount, or a tap-to-set cue.
+    /// During the stoichiometry phase: show the entered amount (the knob is the cue to set it).
     @ViewBuilder private var quantityCue: some View {
         if let q = model.quantity(for: slot) {
             Text("\(q.value, specifier: "%.3g") \(q.unit == .mole ? "mol" : "g")")
                 .font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
-        } else {
-            Text("tap to set")
-                .font(.system(size: 10)).foregroundStyle(accent.opacity(0.8))
         }
     }
 }
