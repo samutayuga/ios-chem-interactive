@@ -110,4 +110,16 @@ final class CanvasReducerTests: XCTestCase {
         let same = canvasReducer(s, .startStoichiometry)
         XCTAssertEqual(same.canvasPhase, .slotAFilled)   // no-op
     }
+
+    func test_startStoichiometry_fromShowingCovalent() {
+        var s = canvasReducer(.initial, .dropElement(slot: .a, zone: nonmetal("H", oxidation: [1])))
+        s = canvasReducer(s, .dropElement(slot: .b, zone: nonmetal("O", oxidation: [-2])))
+        XCTAssertEqual(s.bondingType, .covalent)
+        s = canvasReducer(s, .dismissExplanation)            // -> showingCovalent
+        XCTAssertEqual(s.canvasPhase, .showingCovalent)
+        let stoich = canvasReducer(s, .startStoichiometry)
+        XCTAssertEqual(stoich.canvasPhase, .stoichiometry)
+        XCTAssertEqual(stoich.slotA?.symbol, "H")
+        XCTAssertEqual(stoich.bondingType, .covalent)
+    }
 }
