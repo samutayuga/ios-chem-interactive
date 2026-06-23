@@ -5,9 +5,11 @@ struct DropZoneView: View {
     let slot: Slot
     @Environment(CanvasModel.self) private var model
     @State private var isTargeted = false
+    @State private var showQuantityPopover = false
 
     private var zone: ChemCore.ZoneState? { slot == .a ? model.state.slotA : model.state.slotB }
     private var phase: ChemCore.CanvasPhase { model.state.canvasPhase }
+    private var settingQuantity: Bool { phase == .stoichiometry && zone != nil }
     private var dropDisabled: Bool { phase == .animatingCrossover || phase == .explaining }
     private var showReplace: Bool { zone != nil && phase != .animatingCrossover }
     private var accent: Color { slot == .a ? Theme.cation : Theme.anion }
@@ -34,48 +36,76 @@ struct DropZoneView: View {
             }
         }
         .frame(maxWidth: .infinity, minHeight: 96)
+        .overlay(alignment: .top) {
+            if settingQuantity { quantityKnob }
+        }
     }
 
-    // Graduated measuring cylinder: liquid → graduations → outline → mL label →
-    // centered contents, all inside one aspect-constrained container that also
-    // owns the hit-test shape and the drop/tap gestures.
+    /// A knob on the flask neck during the stoichiometry phase; opens the
+    /// quantity input. Replaces a textual "tap the flask" hint.
+    private var quantityKnob: some View {
+        Button { showQuantityPopover = true } label: {
+            Image(systemName: "slider.horizontal.3")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 30, height: 30)
+                .background(accent, in: Circle())
+                .overlay(Circle().stroke(.white.opacity(0.75), lineWidth: 1.5))
+                .shadow(radius: 3)
+        }
+        .offset(y: -4)
+        .popover(isPresented: $showQuantityPopover) {
+            ReactantQuantityPopover(
+                symbol: zone?.symbol ?? "",
+                entry: Binding(get: { model.quantity(for: slot) },
+                               set: { model.setQuantity($0, for: slot) })
+            )
+        }
+    }
+
+    // Bubbling potion flask: glow halo → liquid fill → rising bubbles → glass
+    // outline → contents in the bulb, all inside one aspect-constrained container
+    // that also owns the hit-test shape and the drop/tap gestures.
     private var cylinder: some View {
         ZStack {
+            // Soft glow halo behind the bulb; intensifies when targeted/selectable.
+            PotionFlaskShape()
+                .fill(accent.opacity(highlighted ? 0.28 : 0.12))
+                .blur(radius: highlighted ? 14 : 9)
+
             if let zone {
                 SubstanceFill(state: resolveSubstanceState(for: zone, elements: model.elements),
                               color: elementClassColor(zone.elementClass),
                               fill: liquidFill)
                     .id(zone.symbol)   // restart the entrance animation when the element changes
             }
-            GraduationTicks()
-                .stroke(accent.opacity(0.35), lineWidth: 1)
-                .clipShape(MeasuringCylinderShape())
-            MeasuringCylinderShape()
-                .stroke(accent.opacity(highlighted ? 1 : 0.4), lineWidth: highlighted ? 3 : 2)
 
-            // Static unit label near the top rim.
-            VStack {
-                HStack {
-                    Text("mL").font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(accent.opacity(0.7))
-                    Spacer()
-                }
-                Spacer()
-            }
-            .padding(.top, 6).padding(.leading, 10)
+            // Bubbles always simmer for the potion vibe; tinted by contents when filled.
+            PotionBubbles(color: zone != nil ? elementClassColor(zone!.elementClass) : accent)
+                .clipShape(PotionFlaskShape())
+                .opacity(0.9)
 
-            // Contents float in the upper region, centered horizontally.
-            VStack {
-                content.frame(maxWidth: .infinity).padding(.top, 28)
-                Spacer()
+            // Glass: a faint inner sheen fill + the rim/wall outline.
+            PotionFlaskShape()
+                .fill(accent.opacity(0.05))
+            PotionFlaskShape()
+                .stroke(accent.opacity(highlighted ? 1 : 0.45), lineWidth: highlighted ? 3 : 2)
+
+            // Contents sit in the bulb, centered.
+            GeometryReader { geo in
+                content
+                    .frame(maxWidth: .infinity)
+                    .position(x: geo.size.width * 0.5, y: geo.size.height * 0.66)
             }
-            .padding(8)
+            .padding(.horizontal, 6)
         }
-        .aspectRatio(0.6, contentMode: .fit)   // measuring cylinder (a touch wider)
-        .frame(maxWidth: .infinity)
-        .contentShape(MeasuringCylinderShape())
+        .aspectRatio(0.6, contentMode: .fit)
+        .frame(maxWidth: .infinity, maxHeight: 150)
+        .contentShape(PotionFlaskShape())
         .onTapGesture {
-            if let token = model.selectedToken, !dropDisabled { model.place(token, in: slot) }
+            if !settingQuantity, let token = model.selectedToken, !dropDisabled {
+                model.place(token, in: slot)
+            }
         }
         .dropDestination(for: TokenTransfer.self) { items, _ in
             guard !dropDisabled, let token = items.first else { return false }
@@ -86,12 +116,15 @@ struct DropZoneView: View {
 
     @ViewBuilder private var content: some View {
         if let zone {
-            if zone.status == .ionized, let charge = zone.derivedCharge {
-                Text(formatIon(symbol: zone.symbol, charge: charge))
-                    .font(.system(size: 30, weight: .bold)).foregroundStyle(accent)
-            } else {
-                Text(zone.symbol)
-                    .font(.system(size: 24, weight: .bold)).foregroundStyle(accent)
+            VStack(spacing: 3) {
+                if zone.status == .ionized, let charge = zone.derivedCharge {
+                    Text(formatIon(symbol: zone.symbol, charge: charge))
+                        .font(.system(size: 30, weight: .bold)).foregroundStyle(accent)
+                } else {
+                    Text(zone.symbol)
+                        .font(.system(size: 24, weight: .bold)).foregroundStyle(accent)
+                }
+                if settingQuantity { quantityCue }
             }
         } else if hasPendingSelection {
             VStack(spacing: 4) {
@@ -101,11 +134,18 @@ struct DropZoneView: View {
                     .font(.system(size: 16)).foregroundStyle(accent.opacity(0.8))
             }
         } else {
-            // Empty + idle: a droplet icon cues "drop / pour here", shifted down.
-            Image(systemName: "drop")
+            // Empty + idle: sparkles cue "drop / brew here".
+            Image(systemName: "sparkles")
                 .font(.system(size: 24))
                 .foregroundStyle(accent.opacity(0.6))
-                .padding(.top, 6)
+        }
+    }
+
+    /// During the stoichiometry phase: show the entered amount (the knob is the cue to set it).
+    @ViewBuilder private var quantityCue: some View {
+        if let q = model.quantity(for: slot) {
+            Text("\(q.value, specifier: "%.2f") \(q.unit == .mole ? "mol" : "g")")
+                .font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
         }
     }
 }

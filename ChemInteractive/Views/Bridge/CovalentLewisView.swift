@@ -109,6 +109,7 @@ struct CovalentLewisView: View {
             Text(covalentCompoundName(slotA: slotA, slotB: slotB, elements: model.elements))
                 .font(.system(size: 14)).foregroundStyle(Theme.text)
                 .multilineTextAlignment(.center)
+            ProductStateBadge(state: predictProductState(bonding: .covalent, a: slotA, b: slotB))
             if !remark.isEmpty {
                 Text(remark)
                     .font(.system(size: 9)).tracking(1).foregroundStyle(.white.opacity(0.7)).multilineTextAlignment(.center)

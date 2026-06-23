@@ -20,5 +20,6 @@ public enum CanvasAction {
     case dismissExplanation
     case replaceElement(slot: Slot)
     case crossoverComplete
+    case startStoichiometry
     case reset
 }

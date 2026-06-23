@@ -10,16 +10,17 @@ public struct ZoneState: Equatable, Sendable {
     public var status: ZoneStatus
     public var group: Int
     public var period: Int
+    public var stateOfMatter: StateOfMatter
 
     public init(symbol: String, elementClass: ElementClass, isPolyatomic: Bool,
                 isTransition: Bool, valenceElectrons: Int, oxidationStates: [Int],
                 derivedCharge: Int? = nil, wrongCount: Int = 0, status: ZoneStatus = .neutral,
-                group: Int = 0, period: Int = 0) {
+                group: Int = 0, period: Int = 0, stateOfMatter: StateOfMatter = .solid) {
         self.symbol = symbol; self.elementClass = elementClass; self.isPolyatomic = isPolyatomic
         self.isTransition = isTransition; self.valenceElectrons = valenceElectrons
         self.oxidationStates = oxidationStates; self.derivedCharge = derivedCharge
         self.wrongCount = wrongCount; self.status = status
-        self.group = group; self.period = period
+        self.group = group; self.period = period; self.stateOfMatter = stateOfMatter
     }
 
     public init(element: Element) {
@@ -31,7 +32,8 @@ public struct ZoneState: Equatable, Sendable {
             valenceElectrons: parseValenceElectrons(config: element.electronConfiguration, group: element.group),
             oxidationStates: element.oxidationStates,
             group: element.group,
-            period: element.period
+            period: element.period,
+            stateOfMatter: element.raw.state
         )
     }
 

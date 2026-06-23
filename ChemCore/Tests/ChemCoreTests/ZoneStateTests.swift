@@ -48,4 +48,11 @@ final class ZoneStateTests: XCTestCase {
         XCTAssertEqual(zone.group, 16)
         XCTAssertEqual(zone.period, 2)
     }
+    func test_zoneFromElement_carriesStateOfMatter() throws {
+        let pt = try PeriodicTable.load()
+        let o = try XCTUnwrap(pt.bySymbol("O"))      // gas at STP
+        let fe = try XCTUnwrap(pt.bySymbol("Fe"))    // solid at STP
+        XCTAssertEqual(ZoneState(element: o).stateOfMatter, .gas)
+        XCTAssertEqual(ZoneState(element: fe).stateOfMatter, .solid)
+    }
 }

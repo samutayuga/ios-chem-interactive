@@ -97,6 +97,12 @@ public func canvasReducer(_ state: CanvasState, _ action: CanvasAction) -> Canva
         s.canvasPhase = .complete
         return s
 
+    case .startStoichiometry:
+        guard state.canvasPhase == .complete || state.canvasPhase == .showingCovalent else { return state }
+        var s = state
+        s.canvasPhase = .stoichiometry
+        return s
+
     case .reset:
         return .initial
     }

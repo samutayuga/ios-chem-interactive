@@ -21,6 +21,16 @@ final class CanvasModel {
     let polyatomicIons: [PolyatomicIon] = PolyatomicIon.polyatomicIons
     private(set) var selectedToken: TokenTransfer?
 
+    /// Transient stoichiometry quantities per slot (UI-only; never part of the
+    /// reduced `CanvasState`). Set on the drop zones during the stoichiometry phase.
+    var quantityA: ReactantEntry?
+    var quantityB: ReactantEntry?
+
+    func quantity(for slot: Slot) -> ReactantEntry? { slot == .a ? quantityA : quantityB }
+    func setQuantity(_ entry: ReactantEntry?, for slot: Slot) {
+        if slot == .a { quantityA = entry } else { quantityB = entry }
+    }
+
     init() {
         // Bundled resource; a load failure is a developer error, not a user path.
         let pt = try! PeriodicTable.load()
@@ -29,6 +39,12 @@ final class CanvasModel {
 
     func send(_ action: CanvasAction) {
         state = canvasReducer(state, action)
+        // Reset stoichiometry inputs once a new reaction starts, so quantities
+        // never leak from a previous product into the next one.
+        if state.canvasPhase == .selecting || state.canvasPhase == .slotAFilled {
+            quantityA = nil
+            quantityB = nil
+        }
     }
 
     /// Rebuilds the ChemCore `ZoneState` for a dragged/tapped token, or nil if unknown.
@@ -49,6 +65,11 @@ final class CanvasModel {
     }
 
     func select(_ token: TokenTransfer) {
+        // Picking an element from the stoichiometry view returns to the bonding
+        // feature: reset to the initial state, then carry the new selection.
+        if state.canvasPhase == .stoichiometry {
+            send(.reset)
+        }
         selectedToken = (selectedToken == token) ? nil : token
     }
 
@@ -60,7 +81,7 @@ final class CanvasModel {
 #if DEBUG
 extension CanvasModel {
     enum DiagramPreview: String {
-        case crossover, ionic, mgcl2, na2o, explainIonic, covalent, co2, metallic
+        case crossover, ionic, mgcl2, na2o, explainIonic, covalent, co2, metallic, stoich
     }
 
     /// Replays real reducer actions to land in a terminal diagram state (for screenshots).
@@ -85,6 +106,11 @@ extension CanvasModel {
             drop("C", .a); drop("O", .b); send(.dismissExplanation)              // .showingCovalent (CO₂, 2 peripheral O)
         case .metallic:
             drop("Na", .a); drop("Mg", .b); send(.dismissExplanation)            // .showingMetallic
+        case .stoich:
+            drop("H", .a); drop("O", .b); send(.dismissExplanation)              // covalent H₂O
+            send(.startStoichiometry)                                            // .stoichiometry
+            quantityA = ReactantEntry(value: 2, unit: .mole)                     // 2 mol H₂
+            quantityB = ReactantEntry(value: 1, unit: .mole)                     // 1 mol O₂
         }
     }
 

@@ -3,8 +3,26 @@ import ChemCore
 
 struct BridgeView: View {
     @Environment(CanvasModel.self) private var model
+    @State private var reactionPulse = false
 
     private var state: CanvasState { model.state }
+    private var bothQuantitiesSet: Bool { model.quantityA != nil && model.quantityB != nil }
+
+    /// Changes when either reactant's unit changes or first appears — but not on
+    /// live value typing, so the reaction fires on both-set and on unit switches
+    /// without firing on every keystroke.
+    private var reactionKey: String {
+        "\(model.quantityA?.unit.rawValue ?? "-")|\(model.quantityB?.unit.rawValue ?? "-")"
+    }
+
+    /// Both reactants now have an amount → fire the reaction sound + burst.
+    private func fireReaction() {
+        SoundFX.reaction()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) { reactionPulse = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+            withAnimation(.easeOut(duration: 0.3)) { reactionPulse = false }
+        }
+    }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -37,8 +55,11 @@ struct BridgeView: View {
                                                    elements: model.elements, ions: model.polyatomicIons))
                                 .font(.system(size: 14)).foregroundStyle(Theme.text)
                                 .multilineTextAlignment(.center)
+                            ProductStateBadge(state: predictProductState(bonding: .ionic,
+                                                                         a: pair.cation, b: pair.anion))
                         }
                         BondingDiagramView(cation: pair.cation, anion: pair.anion)
+                        stoichiometryButton
                         ResetButton { model.send(.reset) }
                     }
                 }
@@ -47,6 +68,7 @@ struct BridgeView: View {
                 if let a = state.slotA, let b = state.slotB {
                     VStack(spacing: 12) {
                         CovalentLewisView(slotA: a, slotB: b)
+                        stoichiometryButton
                         ResetButton { model.send(.reset) }
                     }
                 }
@@ -59,10 +81,34 @@ struct BridgeView: View {
                     }
                 }
 
+            case .stoichiometry:
+                if let a = state.slotA, let b = state.slotB, let result = model.stoichResult {
+                    VStack(spacing: 12) {
+                        StoichResultPanel(result: result, symbolA: a.symbol, symbolB: b.symbol,
+                                          productFormula: model.productFormula)
+                            .scaleEffect(reactionPulse ? 1.06 : 1)
+                            .overlay { if reactionPulse { ReactionBurst() } }
+                        ResetButton { model.send(.reset) }
+                    }
+                    .onChange(of: reactionKey) { _, _ in
+                        if bothQuantitiesSet { fireReaction() }
+                    }
+                }
+
             default:
                 EmptyView()
             }
         }
         .frame(maxWidth: .infinity, alignment: .top)
+    }
+
+    // MARK: - Helpers
+
+    private var stoichiometryButton: some View {
+        Button { model.send(.startStoichiometry) } label: {
+            Label("Stoichiometry", systemImage: "scalemass")
+                .font(.subheadline.weight(.semibold))
+        }
+        .buttonStyle(.borderedProminent)
     }
 }

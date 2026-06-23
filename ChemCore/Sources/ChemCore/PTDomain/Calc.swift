@@ -1,4 +1,4 @@
-public enum StateOfMatter: String, Equatable {
+public enum StateOfMatter: String, Equatable, Sendable {
     case solid = "Solid", liquid = "Liquid", gas = "Gas"
 }
 
