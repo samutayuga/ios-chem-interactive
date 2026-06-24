@@ -31,6 +31,55 @@ bridge ships in the binary** — the chemistry domain logic was ported from the 
 
 ---
 
+## Use cases
+
+One actor — the **chemistry student** — drives everything; the app is fully offline with
+no external systems. Placing the second element auto-runs classification (`«include»`);
+the explanation card, transition-metal charge picker, and stoichiometry calculator are
+optional branches off the base flow (`«extend»`).
+
+```mermaid
+flowchart LR
+    actor(["👤 Chemistry Student"])
+
+    subgraph SYS["ChemInteractive · iOS App"]
+        UC1(["Explore Periodic Table"])
+        UC2(["View Element / Ion Details"])
+        UC3(["Place Elements in Slots"])
+        UC4(["Clear / Reset"])
+        UC5(["Classify &amp; View Bond"])
+        UC6(["View Bond Explanation"])
+        UC7(["Select Transition Metal Charge"])
+        UC8(["Calculate Stoichiometry"])
+    end
+
+    actor --- UC1
+    actor --- UC2
+    actor --- UC3
+    actor --- UC4
+
+    UC3 -. «include» .-> UC5
+    UC7 -. «extend» .-> UC3
+    UC6 -. «extend» .-> UC5
+    UC8 -. «extend» .-> UC5
+
+    classDef focal fill:#fbe4d8,stroke:#eb6c36,stroke-width:2px;
+    class UC5,UC8 focal
+```
+
+| # | Use case | Trigger | Result |
+|---|----------|---------|--------|
+| 1 | Explore Periodic Table | Open app, browse/zoom, Elements ↔ Polyatomic tabs | View 118 elements + 6 polyatomic ions |
+| 2 | View Element / Ion Details | Tap token | Detail card: notation, config, oxidation states, group/period highlight |
+| 3 | Place Elements in Slots | Drag-drop or tap-to-place into Slot A / B | Flask fills; on 2nd token → classify |
+| 4 | Clear / Reset | Tap × or Reset | Empty slot / back to selecting |
+| 5 | Classify &amp; View Bond | 2nd token placed (incl. of #3) | Ionic crossover · covalent Lewis · metallic sea + compound name |
+| 6 | View Bond Explanation | Tap bond label ⓘ (ext. of #5) | Charge-derivation card per slot |
+| 7 | Select Transition Metal Charge | Drop a transition metal (ext. of #3) | Oxidation-state picker → feeds bonding |
+| 8 | Calculate Stoichiometry | Tap ⚖ from a bond result (ext. of #5) | Balanced eq, limiting/excess reagent, yield + reaction effect |
+
+---
+
 ## Architecture
 
 The system is three layers, smallest dependency first:

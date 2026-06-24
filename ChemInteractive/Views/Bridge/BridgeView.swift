@@ -26,7 +26,10 @@ struct BridgeView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("⇌").font(.system(size: 28)).foregroundStyle(Theme.accent.opacity(0.6))
+            Text(reactionGlyph(for: state.bondingType))
+                .font(.system(size: 28))
+                .foregroundStyle(Theme.accent.opacity(0.6))
+                .animation(.easeInOut(duration: 0.2), value: state.bondingType)
 
             switch state.canvasPhase {
             case .animatingCrossover:
