@@ -18,4 +18,10 @@ final class BondingTests: XCTestCase {
         XCTAssertEqual(bondingType(aClass: .metal, bClass: .metal,
                                    aPolyatomic: false, bPolyatomic: false), .metallic)
     }
+    func test_reactionGlyph() {
+        XCTAssertEqual(reactionGlyph(for: nil), "+")           // not yet classified
+        XCTAssertEqual(reactionGlyph(for: .ionic), "→")        // goes to completion
+        XCTAssertEqual(reactionGlyph(for: .metallic), "→")     // goes to completion
+        XCTAssertEqual(reactionGlyph(for: .covalent), "⇌")     // molecular: equilibrium
+    }
 }
