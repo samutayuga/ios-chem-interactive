@@ -27,7 +27,7 @@ bridge ships in the binary** — the chemistry domain logic was ported from the 
 
 - **Platform:** iOS 17.0+, portrait iPhone.
 - **Language:** Swift 5 language mode, SwiftUI.
-- **Tests:** 93 in `ChemCore` + 68 in the app target, all command‑line runnable.
+- **Tests:** 94 in `ChemCore` + 68 in the app target, all command‑line runnable.
 
 ---
 
@@ -221,7 +221,7 @@ The teaching logic that lives in the React app (not in Rust). All pure functions
 | Feature | Implementation | File |
 | --- | --- | --- |
 | Valence electrons | `parseValenceElectrons(config:group:)` strips a noble‑gas prefix, sums the electrons in the highest principal shell (with a group‑based fallback) | `Engine/Valence.swift` |
-| Bond classification | `determineBonding(_:_:)` + `bondingType(…)` (see decision tree below) | `Engine/Bonding.swift` |
+| Bond classification | `determineBonding(_:_:)` + `bondingType(…)` (see decision tree below); `reactionGlyph(for:) -> String` maps the classified `BondingType?` to the bridge arrow (`nil` → `+`, ionic/metallic → `→` go‑to‑completion, covalent → `⇌` equilibrium) | `Engine/Bonding.swift` |
 | Covalent stoichiometry | `calcStoich(veA:veB:) -> (nA, nB, bondOrder)` from octet/duet bonds‑needed and their gcd; `covalentStoich(veA:groupA:periodA:veB:groupB:periodB:)` wraps it with the **orbital‑mismatch rule** (below); `isOrbitalMismatchDoubleBond(…)` is the rule predicate; `iupacFirst(_:_:)` orders binary formulas by electronegativity | `Engine/CovalentStoich.swift` |
 | Metallic count | `metallicElectronCount(veA:veB:poolSize:)` = `min(3·veA + 3·veB, 12)` delocalised electrons | `Engine/Metallic.swift` |
 | Product state | `predictProductState(bonding:a:b:) -> ProductState` — **heuristic** standard‑state of the product: ionic/metallic → solid; covalent estimated from constituents' `stateOfMatter` (any gas → gas, else any liquid → liquid, else solid; H₂O special‑cased liquid). Approximate, for the result badge | `Engine/ProductState.swift` |
@@ -371,7 +371,7 @@ flowchart TB
         subgraph Work["Workspace — HStack (below)"]
             direction LR
             SlotA["DropZoneView<br/>Slot A · Na⁺"]
-            Bridge["BridgeView<br/>⇌ · result diagram · Reset"]
+            Bridge["BridgeView<br/>+ / → / ⇌ · result diagram · Reset"]
             SlotB["DropZoneView<br/>Slot B · Cl⁻"]
         end
         Tray --> Work
@@ -439,7 +439,9 @@ flowchart TB
   (e.g. "Iron(III) oxide", "Ammonium chloride") and `covalentCompoundName`
   (Greek prefixes + elision, e.g. "Carbon dioxide", "Dinitrogen tetroxide") shown
   above each diagram.
-- `BridgeView` — the **phase router**. Shows the `⇌` glyph always and switches on
+- `BridgeView` — the **phase router**. Shows a **reaction‑type‑driven bridge arrow**
+  (`reactionGlyph(for: state.bondingType)` — `+` before classification, `→` for ionic/
+  metallic, `⇌` for covalent — cross‑fading on change) and switches on
   `state.canvasPhase` to render the right result view (formula + name **above** the
   Lewis‑dot diagram, consistently). The ionic `.complete` and covalent `.showingCovalent`
   views carry the **⚖ Stoichiometry** button (`startStoichiometry`); the `.stoichiometry`
@@ -600,7 +602,7 @@ Every transition is a pure `canvasReducer` call; the views only *render* the cur
 
 | Suite | Count | What it proves |
 | --- | --- | --- |
-| `ChemCore` PTDomain/Engine/State | 93 | electron configuration (incl. anomalies), block/period/group/category/class/oxidation states, atomic mass, every reducer transition (incl. `startStoichiometry`), valence/bonding/metallic math, the covalent orbital‑mismatch rule (SO₂/SeS₂ + ClF/NP/O₂/CO₂ negatives), ZoneState group/period, product‑state heuristic, and stoichiometry (equation balancing for H₂O/NaCl/MgCl₂, limiting reactant, theoretical yield, excess, diatomic handling) |
+| `ChemCore` PTDomain/Engine/State | 94 | electron configuration (incl. anomalies), block/period/group/category/class/oxidation states, atomic mass, every reducer transition (incl. `startStoichiometry`), valence/bonding/metallic math, the reaction‑glyph mapping (`+`/`→`/`⇌`), the covalent orbital‑mismatch rule (SO₂/SeS₂ + ClF/NP/O₂/CO₂ negatives), ZoneState group/period, product‑state heuristic, and stoichiometry (equation balancing for H₂O/NaCl/MgCl₂, limiting reactant, theoretical yield, excess, diatomic handling) |
 | **Golden fidelity** (`GoldenFidelityTests`) | — | for **all 118 elements**, every Swift‑computed derived field matches the original WASM's output (`elements.golden.json`, generated once by `tools/dump-elements.mjs`) |
 | App `LewisLayoutTests` | 14 | the diagram geometry counts (crossover subscripts/steps, Lewis transfer counts, covalent central/lone‑pair counts incl. the SO₂ orbital‑mismatch layout, metallic count/pattern) |
 | App `CompoundNameTests`, `BondingExplanationTests` | — | covalent compound naming + bond wording, incl. the SO₂ orbital‑mismatch name ("Sulfur dioxide") and explanation sentence |
@@ -635,6 +637,20 @@ animation flows is a manual pass in the simulator.
 - **Hand‑authored Xcode project.** A single app target + a unit‑test target reference
   `ChemCore` as a local package; file‑system‑synchronized groups mean new `.swift` files need
   no project edits.
+
+---
+
+## Known console warnings
+
+- **`TUIKeyplane.right'.width == -1.5` unsatisfiable-constraint log.** Appears when the
+  stoichiometry quantity entry (`Views/Bridge/ReactantQuantityPopover.swift`, a `TextField`
+  with `.keyboardType(.decimalPad)`) brings up the keyboard. `TUIKeyplane` is a private view
+  **inside Apple's own keyboard** (`TextInputUI.framework`), not any view this app creates —
+  the tell is that the conflict lists a single constraint rather than two mutually-exclusive
+  ones. It is an Apple false positive with no user-visible effect; UIKit auto-recovers.
+  **Ignore it.** To silence *all* UIKit constraint logging during development, set the scheme
+  environment variable `_UIConstraintBasedLayoutLogUnsatisfiable = NO` (also hides any real
+  conflicts, so use temporarily).
 
 ---
 
