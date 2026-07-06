@@ -77,7 +77,16 @@ ChemCore (additive):
 - **composition:** element → `[symbol: 1]`; polyatomic ion → `PolyatomicIon.composition` (new field).
 - **valenceElectrons / group / period:** straight from `ZoneState`.
 
-Build path: `makeReactant(zone.map(toSpecies))` → `Reactant`; then `solveReaction(...)`.
+Build path: a **pair-aware** `buildReactant(_ zoneStates: [ZoneState], atomicMass:) -> Reactant?` maps the zone's 1–2 `ZoneState`s to `Species` (assigning charges per the rule below), calls `makeReactant`, and returns the `Reactant` (nil while empty or a transition-metal charge is pending). Then `solveReaction(...)`.
+
+**Charge assignment must be pair-aware** — the engine's `makeReactant` treats two species with explicit opposite charges as ionic (to model acids like HCl), so blindly charging every element would misclassify covalent fuels. Rule for a 2-species zone:
+
+- Either species polyatomic → ionic: metal/H → positive, its main-group nonmetal partner → negative, polyatomic → its own charge.
+- Metal + nonmetal → ionic: metal → positive oxidation state, nonmetal → negative oxidation state.
+- Nonmetal + nonmetal: **acid case** (one is H, the other a group-17 halogen) → ionic, H = +1, halogen = −1. **Otherwise covalent** — both charges `nil`, so `makeReactant` uses the covalent path via `valenceElectrons` (e.g. CH₄, CO₂).
+- A single species → bare element; charge `nil` (unused).
+
+This keeps NaCl / NaOH / Na₂SO₄ / HCl ionic and CH₄ / CO₂ covalent, matching the reaction-class test cases below.
 
 ### PolyatomicIon.composition (ChemCore)
 
@@ -111,7 +120,7 @@ Add `composition: [String: Int]` to `PolyatomicIon`, populated:
 
 App target: XCTest (68 existing). Test the pure seams — model + mapping — not SwiftUI rendering.
 
-- **SpeciesMappingTests:** main-group charge auto (Na→+1, O→−2, Al→+3); transition metal → nil until picked; polyatomic → charge + composition from `PolyatomicIon`; covalent element → nil charge with valence carried; molar-mass lookup.
+- **SpeciesMappingTests:** main-group charge auto (Na→+1, O→−2, Al→+3); transition metal → nil until picked; polyatomic → charge + composition from `PolyatomicIon`; molar-mass lookup. Pair-aware `buildReactant`: Na+Cl → ionic NaCl (cation/anion set); H+Cl → ionic HCl (acid); C+H → covalent CH₄ (cation nil); Na+SO₄ → ionic Na₂SO₄.
 - **PolyatomicIonCompositionTests (ChemCore):** the 6 ions carry correct `composition`; existing `ZoneState(polyatomic:)` still builds.
 - **ReactionLabModelTests:** drive the model like a reducer and assert `result`:
   - NaOH + HCl → NaCl + H₂O (double displacement, feasible)
