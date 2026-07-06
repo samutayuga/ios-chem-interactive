@@ -19,7 +19,7 @@ final class SubstanceStateTests: XCTestCase {
         XCTAssertEqual(resolveSubstanceState(for: try zone(80), elements: elements), .liquid)   // Hg
     }
     func test_polyatomicIsAqueous() {
-        let oh = ZoneState(polyatomic: PolyatomicIon(symbol: "OH", name: "Hydroxide", charge: -1, formula: "OH⁻"))
+        let oh = ZoneState(polyatomic: PolyatomicIon(symbol: "OH", name: "Hydroxide", charge: -1, formula: "OH⁻", composition: ["O": 1, "H": 1]))
         XCTAssertEqual(resolveSubstanceState(for: oh, elements: elements), .aqueous)
     }
     func test_unknownSymbolFallsBackToLiquid() {
