@@ -31,7 +31,11 @@ public func makeReactant(_ species: [Species]) -> Reactant {
     }
 
     let a = species[0], b = species[1]
+    // Check for explicit opposite charges (e.g., H+ and Cl-)
+    let hasOppositeCharges = a.charge != nil && b.charge != nil
+        && (a.charge ?? 0) * (b.charge ?? 0) < 0
     let ionic = a.isPolyatomic || b.isPolyatomic
+        || hasOppositeCharges
         || determineBonding(a.elementClass, b.elementClass) == .ionic
 
     if ionic {
