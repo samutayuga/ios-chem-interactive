@@ -57,4 +57,28 @@ final class ProductPredictionTests: XCTestCase {
         XCTAssertEqual(formulas(predictProducts(.combustion, ch4, o2)),
                        ["CO₂", "H₂O"].sorted())
     }
+    func test_halogen_displacement_frees_diatomic() {
+        let cl2 = makeReactant([el("Cl", mass: 35.45, .nonMetal, charge: -1)])
+        let kbr = makeReactant([el("K", mass: 39.1, .metal, charge: 1),
+                                el("Br", mass: 79.9, .nonMetal, charge: -1)])
+        XCTAssertEqual(formulas(predictProducts(.singleDisplacement, cl2, kbr)),
+                       ["Br₂", "KCl"].sorted())
+    }
+    func test_metal_displaces_hydrogen_as_h2() {
+        let zn = makeReactant([el("Zn", mass: 65.38, .metal, charge: 2)])
+        let hcl = makeReactant([el("H", mass: 1.008, .nonMetal, charge: 1),
+                                el("Cl", mass: 35.45, .nonMetal, charge: -1)])
+        XCTAssertEqual(formulas(predictProducts(.singleDisplacement, zn, hcl)),
+                       ["H₂", "ZnCl₂"].sorted())
+    }
+    func test_bare_element_combustion_makes_correct_oxide() {
+        let mg = makeReactant([el("Mg", mass: 24.3, .metal, charge: 2)])
+        let o2 = makeReactant([el("O", mass: 16, .nonMetal, charge: -2)])
+        XCTAssertEqual(formulas(predictProducts(.combustion, mg, o2)),
+                       ["MgO"])
+
+        let al = makeReactant([el("Al", mass: 27, .metal, charge: 3)])
+        XCTAssertEqual(formulas(predictProducts(.combustion, al, o2)),
+                       ["Al₂O₃"])
+    }
 }

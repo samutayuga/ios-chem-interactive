@@ -16,6 +16,15 @@ public enum Prediction: Equatable, Sendable {
 private let water = Product(formula: "H₂O", composition: ["H": 2, "O": 1])
 private let carbonDioxide = Product(formula: "CO₂", composition: ["C": 1, "O": 2])
 
+/// A freed element from a displacement, as its stable molecular form
+/// (diatomic for H, N, O, F, Cl, Br, I).
+private func freedElement(_ symbol: String) -> Product {
+    if naturallyDiatomic.contains(symbol) {
+        return Product(formula: "\(symbol)\(formulaSubscript(2))", composition: [symbol: 2])
+    }
+    return Product(formula: symbol, composition: [symbol: 1])
+}
+
 /// Neutralise a cation with an anion into a single ionic Product.
 private func ionicProduct(_ cation: Species, _ anion: Species) -> Product {
     let sub = crossoverSubscripts(cationCharge: cation.charge ?? 1,
@@ -59,7 +68,7 @@ public func predictProducts(_ cls: ReactionClass, _ r1: Reactant, _ r2: Reactant
             switch displaces(freeSpecies.symbol, over: boundCation.symbol) {
             case .some(true):
                 let newSalt = ionicProduct(freeSpecies, anion)
-                let freed = Product(formula: boundCation.symbol, composition: [boundCation.symbol: 1])
+                let freed = freedElement(boundCation.symbol)
                 return .products([newSalt, freed])
             default:
                 return .infeasible("\(freeSpecies.symbol) is below \(boundCation.symbol) in the activity series")
@@ -68,7 +77,7 @@ public func predictProducts(_ cls: ReactionClass, _ r1: Reactant, _ r2: Reactant
             switch displaces(freeSpecies.symbol, over: anion.symbol) {
             case .some(true):
                 let newSalt = ionicProduct(boundCation, freeSpecies)
-                let freed = Product(formula: anion.symbol, composition: [anion.symbol: 1])
+                let freed = freedElement(anion.symbol)
                 return .products([newSalt, freed])
             default:
                 return .infeasible("\(freeSpecies.symbol) is below \(anion.symbol) in the activity series")
@@ -77,20 +86,22 @@ public func predictProducts(_ cls: ReactionClass, _ r1: Reactant, _ r2: Reactant
 
     case .combustion:
         let fuel = isDioxygenReactant(r1) ? r2 : r1
-        if let c = fuel.composition["C"] { // hydrocarbon path
+        if fuel.composition["C"] != nil { // hydrocarbon path
             var products = [carbonDioxide]
             if fuel.composition["H"] != nil { products.append(water) }
-            _ = c
             return .products(products)
         }
         if fuel.composition["H"] != nil {
             return .products([water])
         }
-        // Bare-element fuel → oxide E O_n where n = |positive charge|.
+        // Bare-element fuel → oxide via crossover against oxygen (charge -2).
         guard let e = fuel.species.first else { return .infeasible("no fuel") }
-        let n = max(1, abs(e.charge ?? 2))
-        let oxideComp = ["\(e.symbol)": 1, "O": n]
-        let oxide = Product(formula: "\(e.symbol)O\(formulaSubscript(n))", composition: oxideComp)
+        let sub = crossoverSubscripts(cationCharge: abs(e.charge ?? 2), anionCharge: -2)
+        let oxideComp = [e.symbol: sub.cationSub, "O": sub.anionSub]
+        let oxide = Product(
+            formula: binaryFormula(first: e.symbol, firstCount: sub.cationSub,
+                                   second: "O", secondCount: sub.anionSub, secondIsPolyatomic: false),
+            composition: oxideComp)
         return .products([oxide])
 
     case .synthesis:
