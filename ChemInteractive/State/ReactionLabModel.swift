@@ -59,7 +59,19 @@ final class ReactionLabModel {
         guard index < arr.count else { return }
         arr.remove(at: index)
         setTokens(arr, zone)
-        if pendingCharge?.zone == zone { pendingCharge = nil }
+        recomputePendingCharge()
+    }
+
+    /// Re-derives the pending-charge slot from current zone contents: the first
+    /// transition metal still lacking a picked charge, or nil if none remain.
+    private func recomputePendingCharge() {
+        for (zoneNum, arr) in [(1, zone1), (2, zone2)] {
+            if let idx = arr.firstIndex(where: { $0.isTransition && $0.derivedCharge == nil }) {
+                pendingCharge = PendingCharge(zone: zoneNum, index: idx)
+                return
+            }
+        }
+        pendingCharge = nil
     }
 
     func setQuantity(_ entry: ReactantEntry?, zone: Int) {

@@ -71,4 +71,17 @@ final class ReactionLabModelTests: XCTestCase {
         let naclIdx = r.products.firstIndex { $0.formula == "NaCl" }!
         XCTAssertEqual(r.yields[naclIdx].moles, 1.0, accuracy: 1e-6)
     }
+
+    func test_removing_sibling_keeps_pending_on_transition_metal() {
+        let m = ReactionLabModel()
+        m.place(token("Cu"), inZone: 1)               // Cu is a transition metal → pending (1,0)
+        XCTAssertEqual(m.pendingCharge, ReactionLabModel.PendingCharge(zone: 1, index: 0))
+        m.pickCharge(2)                               // resolve Cu
+        XCTAssertNil(m.pendingCharge)
+        m.place(token("Na"), inZone: 1)               // Cu(0), Na(1)
+        m.place(token("Zn"), inZone: 2)               // Zn transition → pending (2,0)
+        XCTAssertEqual(m.pendingCharge, ReactionLabModel.PendingCharge(zone: 2, index: 0))
+        m.removeToken(zone: 1, index: 1)              // remove Na (a resolved sibling zone); Zn still unresolved
+        XCTAssertEqual(m.pendingCharge, ReactionLabModel.PendingCharge(zone: 2, index: 0))
+    }
 }
