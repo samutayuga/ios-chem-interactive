@@ -85,7 +85,7 @@ public func predictProducts(_ cls: ReactionClass, _ r1: Reactant, _ r2: Reactant
         }
 
     case .combustion:
-        let fuel = isDioxygenReactant(r1) ? r2 : r1
+        let fuel = isDioxygen(r1) ? r2 : r1
         if fuel.composition["C"] != nil { // hydrocarbon path
             var products = [carbonDioxide]
             if fuel.composition["H"] != nil { products.append(water) }
@@ -96,6 +96,8 @@ public func predictProducts(_ cls: ReactionClass, _ r1: Reactant, _ r2: Reactant
         }
         // Bare-element fuel → oxide via crossover against oxygen (charge -2).
         guard let e = fuel.species.first else { return .infeasible("no fuel") }
+        // Requires e.charge to encode the fuel element's oxidation magnitude;
+        // when charge is nil this falls back to 2, which is only correct for +2 elements.
         let sub = crossoverSubscripts(cationCharge: abs(e.charge ?? 2), anionCharge: -2)
         let oxideComp = [e.symbol: sub.cationSub, "O": sub.anionSub]
         let oxide = Product(
@@ -111,8 +113,4 @@ public func predictProducts(_ cls: ReactionClass, _ r1: Reactant, _ r2: Reactant
     case .none:
         return .infeasible("no recognised reaction")
     }
-}
-
-private func isDioxygenReactant(_ r: Reactant) -> Bool {
-    r.composition.count == 1 && r.composition["O"] == 2
 }

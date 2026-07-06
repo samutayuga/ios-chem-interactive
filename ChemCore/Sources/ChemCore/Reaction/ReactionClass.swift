@@ -4,7 +4,7 @@ public enum ReactionClass: String, Equatable, Sendable {
     case synthesis, doubleDisplacement, singleDisplacement, combustion, none
 }
 
-private func isDioxygen(_ r: Reactant) -> Bool {
+func isDioxygen(_ r: Reactant) -> Bool {
     r.composition.count == 1 && r.composition["O"] == 2
 }
 private func isFuel(_ r: Reactant) -> Bool {

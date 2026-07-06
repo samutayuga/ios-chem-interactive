@@ -205,6 +205,13 @@ Every `BalancedTerm` carries `formula` + `composition`. The future redox calcula
 derives per-element oxidation states from these. No hook is stubbed now; the result
 shape simply accommodates it.
 
+Note: the current `Product` type stores only `formula` plus a flat element-count
+`composition`, and drops the source `Species` provenance (per-ion charge,
+`isPolyatomic`). A future redox/oxidation-state calculator that needs polyatomic
+grouping (e.g. S is +6 within SO₄²⁻, not derivable from a merged `{S:1,O:4}`) will
+therefore need either formula re-parsing or an enriched product term that retains
+constituent ion identity.
+
 ## Testing
 
 XCTest, pure, command-line runnable, mirroring the existing ChemCore test style.
