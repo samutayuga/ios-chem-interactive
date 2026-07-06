@@ -531,9 +531,15 @@ final class ReactionLedgerFormatTests: XCTestCase {
     }
 
     func test_equation_with_coefficients() {
+        // Reactant side is fixed (r1=HCl, r2=Na₂CO₃); product ORDER is engine-defined,
+        // so assert the LHS exactly and the product terms order-independently.
         let res = solved([("H", false), ("Cl", false)], [("Na", false), ("CO₃", true)])!
         guard case .success(let r) = res else { return XCTFail() }
-        XCTAssertEqual(ReactionLedgerFormat.equation(r), "2HCl + Na₂CO₃ → 2NaCl + CO₂ + H₂O")
+        let eqn = ReactionLedgerFormat.equation(r)
+        XCTAssertTrue(eqn.hasPrefix("2HCl + Na₂CO₃ → "), eqn)
+        XCTAssertTrue(eqn.contains("2NaCl"), eqn)
+        XCTAssertTrue(eqn.contains("CO₂"), eqn)
+        XCTAssertTrue(eqn.contains("H₂O"), eqn)
     }
 
     func test_productLines_and_footer() {
