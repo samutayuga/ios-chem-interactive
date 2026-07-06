@@ -15,8 +15,8 @@
 - **ChemCore change is one additive field:** `PolyatomicIon.composition: [String: Int]` (Task 1). All 140 ChemCore tests must stay green.
 - **Charge assignment is pair-aware** (the engine treats two species with explicit opposite charges as ionic, to model acids). Rule, per zone: either species polyatomic → ionic; metal+nonmetal → ionic; nonmetal+nonmetal → ionic ONLY for the acid case (H + group-17 halogen), else covalent (charges nil). Single species → carry its ionic charge (needed for later product crossover). Keeps NaCl/NaOH/Na₂SO₄/HCl ionic and CH₄/CO₂ covalent.
 - **Placement is drag-and-drop** into the reactant zones (the tray's `TokenTransfer` drag payload is model-agnostic). Tap-to-select-then-place stays bonding-mode-only in v1 (the shared tray remains bound to `CanvasModel`); this is a deliberate scope decision, not an omission to fix.
-- **App test command:** `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:ChemInteractiveTests/<TestClass> 2>&1 | tail -20`. If that simulator is unavailable, pick one from `xcrun simctl list devices available` and use its name. SourceKit "No such module 'ChemCore'/'XCTest'" warnings are IDE-indexing noise — `xcodebuild` is the authoritative gate.
-- **App build gate (for view tasks):** `xcodebuild build -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17' 2>&1 | tail -20` → expect `BUILD SUCCEEDED`.
+- **App test command:** `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:ChemInteractiveTests/<TestClass> 2>&1 | tail -20`. If that simulator is unavailable, pick one from `xcrun simctl list devices available` and use its name. SourceKit "No such module 'ChemCore'/'XCTest'" warnings are IDE-indexing noise — `xcodebuild` is the authoritative gate.
+- **App build gate (for view tasks):** `xcodebuild build -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17 Pro' 2>&1 | tail -20` → expect `BUILD SUCCEEDED`.
 - **ChemCore test command:** `cd ChemCore && swift test --filter <TestClass>`.
 - **Commit message convention:** end body with `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
 
@@ -193,7 +193,7 @@ final class SpeciesMappingTests: XCTestCase {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:ChemInteractiveTests/SpeciesMappingTests 2>&1 | tail -20`
+Run: `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:ChemInteractiveTests/SpeciesMappingTests 2>&1 | tail -20`
 Expected: FAIL — `cannot find 'SpeciesMapping' in scope`.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -280,7 +280,7 @@ enum SpeciesMapping {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:ChemInteractiveTests/SpeciesMappingTests 2>&1 | tail -20`
+Run: `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:ChemInteractiveTests/SpeciesMappingTests 2>&1 | tail -20`
 Expected: PASS (6 tests).
 
 - [ ] **Step 5: Commit**
@@ -384,7 +384,7 @@ final class ReactionLabModelTests: XCTestCase {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:ChemInteractiveTests/ReactionLabModelTests 2>&1 | tail -20`
+Run: `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:ChemInteractiveTests/ReactionLabModelTests 2>&1 | tail -20`
 Expected: FAIL — `cannot find 'ReactionLabModel' in scope`.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -482,7 +482,7 @@ final class ReactionLabModel {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:ChemInteractiveTests/ReactionLabModelTests 2>&1 | tail -20`
+Run: `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:ChemInteractiveTests/ReactionLabModelTests 2>&1 | tail -20`
 Expected: PASS (7 tests).
 
 - [ ] **Step 5: Commit**
@@ -562,7 +562,7 @@ final class ReactionLedgerFormatTests: XCTestCase {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:ChemInteractiveTests/ReactionLedgerFormatTests 2>&1 | tail -20`
+Run: `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:ChemInteractiveTests/ReactionLedgerFormatTests 2>&1 | tail -20`
 Expected: FAIL — `cannot find 'ReactionLedgerFormat' in scope`.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -640,7 +640,7 @@ enum ReactionLedgerFormat {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:ChemInteractiveTests/ReactionLedgerFormatTests 2>&1 | tail -20`
+Run: `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:ChemInteractiveTests/ReactionLedgerFormatTests 2>&1 | tail -20`
 Expected: PASS (5 tests).
 
 - [ ] **Step 5: Commit**
@@ -665,7 +665,7 @@ This task has no unit test (pure SwiftUI); the gate is that the app **builds** w
 
 - [ ] **Step 1: Verify the app builds BEFORE adding the file (baseline green)**
 
-Run: `xcodebuild build -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17' 2>&1 | tail -5`
+Run: `xcodebuild build -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17 Pro' 2>&1 | tail -5`
 Expected: `BUILD SUCCEEDED`.
 
 - [ ] **Step 2: Create the view**
@@ -756,7 +756,7 @@ struct ReactantZoneView: View {
 
 - [ ] **Step 3: Verify the app still builds with the new view**
 
-Run: `xcodebuild build -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17' 2>&1 | tail -5`
+Run: `xcodebuild build -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17 Pro' 2>&1 | tail -5`
 Expected: `BUILD SUCCEEDED`.
 
 - [ ] **Step 4: Commit**
@@ -860,7 +860,7 @@ struct ReactionLedgerView: View {
 
 - [ ] **Step 2: Verify the app builds**
 
-Run: `xcodebuild build -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17' 2>&1 | tail -5`
+Run: `xcodebuild build -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17 Pro' 2>&1 | tail -5`
 Expected: `BUILD SUCCEEDED`.
 
 - [ ] **Step 3: Commit**
@@ -1052,12 +1052,12 @@ struct ChemInteractiveApp: App {
 
 - [ ] **Step 5: Build the app**
 
-Run: `xcodebuild build -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17' 2>&1 | tail -8`
+Run: `xcodebuild build -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17 Pro' 2>&1 | tail -8`
 Expected: `BUILD SUCCEEDED`.
 
 - [ ] **Step 6: Run the FULL app test suite (no regressions)**
 
-Run: `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17' 2>&1 | tail -12`
+Run: `xcodebuild test -scheme ChemInteractive -destination 'platform=iOS Simulator,name=iPhone 17 Pro' 2>&1 | tail -12`
 Expected: all `ChemInteractiveTests` pass — the 68 pre-existing plus the new `SpeciesMappingTests`, `ReactionLabModelTests`, `ReactionLedgerFormatTests`.
 
 - [ ] **Step 7: Run the ChemCore suite**
