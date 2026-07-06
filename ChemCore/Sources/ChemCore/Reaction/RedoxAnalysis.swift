@@ -64,7 +64,12 @@ public func analyzeRedox(_ result: ReactionResult,
     for sym in Set(reactantOcc.keys).intersection(productOcc.keys).sorted() {
         let beforeStates = Set(reactantOcc[sym]!.map(\.state))
         let afterStates = Set(productOcc[sym]!.map(\.state))
-        guard beforeStates.count == 1, afterStates.count == 1 else { continue } // ambiguous → skip
+        guard beforeStates.count == 1, afterStates.count == 1 else {
+            // Conflicting states on one side → direction undeterminable; flag the compounds.
+            indeterminate.append(contentsOf: reactantOcc[sym]!.map(\.formula))
+            indeterminate.append(contentsOf: productOcc[sym]!.map(\.formula))
+            continue
+        }
         let before = beforeStates.first!, after = afterStates.first!
         guard before != after else { continue }
         changes.append(ElementRedox(
@@ -94,12 +99,15 @@ public func analyzeRedox(_ result: ReactionResult,
         }
     }
 
+    var seenIndeterminate = Set<String>()
+    let uniqueIndeterminate = indeterminate.filter { seenIndeterminate.insert($0).inserted }
+
     return RedoxAnalysis(
         isRedox: isRedox,
         oxidisingAgent: oxidising?.reactantFormula,
         reducingAgent: reducing?.reactantFormula,
         changes: changes,
         oxidationStates: statesByFormula,
-        indeterminate: indeterminate,
+        indeterminate: uniqueIndeterminate,
         narrative: narrative)
 }

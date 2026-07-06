@@ -69,4 +69,15 @@ final class RedoxAnalysisTests: XCTestCase {
         XCTAssertTrue(a.narrative.contains { $0.contains("Zn is oxidised") && $0.contains("from 0 in Zn to +2 in ZnSO₄") })
         XCTAssertTrue(a.narrative.contains { $0.contains("copper(II) sulfate is the oxidising agent") })
     }
+
+    func test_conflicting_same_side_states_go_to_indeterminate() {
+        // O appears at 0 (in O₂) and −2 (in H₂O) on the reactant side → ambiguous, must be flagged.
+        let r = result([term(1, "O₂", ["O": 2]), term(1, "H₂O", ["H": 2, "O": 1])],
+                       [term(1, "H₂O", ["H": 2, "O": 1])])
+        let a = analyzeRedox(r)
+        XCTAssertFalse(a.changes.contains { $0.symbol == "O" })   // O skipped, not in changes
+        XCTAssertTrue(a.indeterminate.contains("O₂"))
+        XCTAssertTrue(a.indeterminate.contains("H₂O"))
+        XCTAssertEqual(a.indeterminate.count, Set(a.indeterminate).count) // de-duplicated
+    }
 }
