@@ -50,4 +50,20 @@ final class ReactantTests: XCTestCase {
         XCTAssertEqual(r.composition, ["C": 1, "H": 4])
         XCTAssertNil(r.cation)
     }
+    func test_opposite_charges_treated_as_ionic() {
+        let h = element("H", mass: 1.008, .nonMetal, charge: 1)
+        let cl = element("Cl", mass: 35.45, .nonMetal, charge: -1)
+        let r = makeReactant([h, cl])
+        XCTAssertEqual(r.formula, "HCl")
+        XCTAssertEqual(r.cation?.symbol, "H")
+        XCTAssertEqual(r.anion?.symbol, "Cl")
+        XCTAssertFalse(r.isBareElement)
+    }
+    func test_chargeless_nonmetals_stay_covalent() {
+        let c = element("C", mass: 12.011, .nonMetal, ve: 4, group: 14, period: 2)
+        let h = element("H", mass: 1.008, .nonMetal, ve: 1, group: 1, period: 1)
+        let r = makeReactant([c, h])
+        XCTAssertNil(r.cation)
+        XCTAssertNil(r.anion)
+    }
 }

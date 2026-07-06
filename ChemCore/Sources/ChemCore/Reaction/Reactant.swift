@@ -32,6 +32,10 @@ public func makeReactant(_ species: [Species]) -> Reactant {
 
     let a = species[0], b = species[1]
     // Check for explicit opposite charges (e.g., H+ and Cl-)
+    // An acid like HCl is covalent by electronegativity (both non-metals),
+    // but is modeled as ionic (H+ cation + anion) for reaction purposes.
+    // This relies on callers setting `charge` only to express ionic intent;
+    // neutral elements must carry `charge == nil` for the covalent path to apply.
     let hasOppositeCharges = a.charge != nil && b.charge != nil
         && (a.charge ?? 0) * (b.charge ?? 0) < 0
     let ionic = a.isPolyatomic || b.isPolyatomic
