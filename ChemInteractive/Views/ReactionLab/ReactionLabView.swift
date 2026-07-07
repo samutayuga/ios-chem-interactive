@@ -8,11 +8,7 @@ struct ReactionLabView: View {
     @State private var showFailure = false
     @State private var failureTitle = ""
     @State private var failureMessage = ""
-    @State private var activeSheet: LabSheet?
-    @AppStorage("reactionLabTourSeen") private var tourSeen = false
-
-    // A single sheet driver — SwiftUI honours only one `.sheet` per view.
-    private enum LabSheet: String, Identifiable { case tour, detail; var id: String { rawValue } }
+    @State private var showDetail = false
 
     private var fireKey: String {
         "\(model.quantity1?.unit.rawValue ?? "-")|\(model.quantity2?.unit.rawValue ?? "-")"
@@ -33,10 +29,6 @@ struct ReactionLabView: View {
     var body: some View {
         VStack(spacing: 12) {
             HStack {
-                Button { activeSheet = .tour } label: {
-                    Image(systemName: "questionmark.circle").font(.title3)
-                }
-                .tint(Theme.accent)
                 Spacer()
                 Button { model.reset() } label: {
                     Label("Reset", systemImage: "arrow.counterclockwise").font(.caption)
@@ -55,7 +47,7 @@ struct ReactionLabView: View {
                     ReactionLedgerView(outcome: outcome)
                         .scaleEffect(pulse ? 1.05 : 1)
                         .overlay { if pulse { ReactionBurst() } }
-                    Button { activeSheet = .detail } label: {
+                    Button { showDetail = true } label: {
                         Label("Full explanation", systemImage: "text.magnifyingglass")
                             .font(.caption.weight(.semibold))
                     }
@@ -85,22 +77,10 @@ struct ReactionLabView: View {
         } message: {
             Text(failureMessage)
         }
-        .sheet(item: $activeSheet) { which in
-            switch which {
-            case .tour:
-                ReactionLabTourSheet()
-            case .detail:
-                if case .success(let r)? = model.result, r.feasible {
-                    ReactionDetailSheet(result: r)
-                }
+        .sheet(isPresented: $showDetail) {
+            if case .success(let r)? = model.result, r.feasible {
+                ReactionDetailSheet(result: r)
             }
-        }
-        .onAppear {
-            guard !tourSeen else { return }
-            tourSeen = true
-            // Present after the view settles — setting sheet state during onAppear
-            // itself often fails to present.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { activeSheet = .tour }
         }
     }
 
