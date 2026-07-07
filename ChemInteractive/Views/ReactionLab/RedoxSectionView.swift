@@ -11,7 +11,7 @@ struct RedoxSectionView: View {
     private let redColor = Color(hex: 0x40c0ff)  // reduced — cool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .center, spacing: 10) {
             header
             if analysis.isRedox {
                 agents
@@ -21,11 +21,12 @@ struct RedoxSectionView: View {
                 }
             } else {
                 Text("No oxidation states change — every atom keeps its charge.")
-                    .font(.caption).foregroundStyle(Theme.text.opacity(0.75))
+                    .font(.caption).multilineTextAlignment(.center)
+                    .foregroundStyle(Theme.text.opacity(0.75))
             }
         }
         .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .background(RoundedRectangle(cornerRadius: 14).fill(Theme.surface.opacity(0.55)))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.accent.opacity(0.3), lineWidth: 1))
     }
@@ -35,7 +36,6 @@ struct RedoxSectionView: View {
             Image(systemName: analysis.isRedox ? "arrow.triangle.2.circlepath" : "equal.circle")
             Text(analysis.isRedox ? "REDOX" : "NON-REDOX")
                 .font(.caption.weight(.heavy)).tracking(1.5)
-            Spacer()
         }
         .foregroundStyle(analysis.isRedox ? oxColor : Theme.text.opacity(0.6))
     }
@@ -59,9 +59,8 @@ struct RedoxSectionView: View {
                     .foregroundStyle(color.opacity(0.9)).tracking(0.5)
                 Text(formula).font(.subheadline.weight(.bold)).foregroundStyle(.white)
             }
-            Spacer()
         }
-        .padding(.horizontal, 10).padding(.vertical, 6)
+        .padding(.horizontal, 14).padding(.vertical, 6)
         .background(RoundedRectangle(cornerRadius: 10).fill(color.opacity(0.15)))
     }
 
@@ -76,9 +75,8 @@ struct RedoxSectionView: View {
             Text(signed(c.before)).font(.caption.monospacedDigit()).foregroundStyle(Theme.text.opacity(0.7))
             Image(systemName: "arrow.right").font(.caption2).foregroundStyle(color)
             Text(signed(c.after)).font(.caption.weight(.bold).monospacedDigit()).foregroundStyle(color)
-            Text(up ? "oxidised" : "reduced").font(.caption2.weight(.semibold)).foregroundStyle(color)
-            Spacer()
             Image(systemName: up ? "arrow.up" : "arrow.down").font(.caption2).foregroundStyle(color)
+            Text(up ? "oxidised" : "reduced").font(.caption2.weight(.semibold)).foregroundStyle(color)
         }
     }
 
