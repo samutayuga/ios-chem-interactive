@@ -36,7 +36,8 @@ struct ReactionLedgerView: View {
 
             Text(ReactionLedgerFormat.footer(r))
                 .font(.caption2).foregroundStyle(Theme.text.opacity(0.75))
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, alignment: .center)
 
             compactRedox(analyzeRedox(r))
         }
@@ -82,9 +83,8 @@ struct ReactionLedgerView: View {
             if let agents = ReactionLedgerFormat.redoxAgents(a) {
                 Text(agents).font(.caption2).foregroundStyle(Theme.text.opacity(0.75)).lineLimit(1)
             }
-            Spacer()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private func num(_ v: Double) -> String { String(format: "%.2f", v) }

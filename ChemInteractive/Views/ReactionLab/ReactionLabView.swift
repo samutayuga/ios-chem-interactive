@@ -28,6 +28,13 @@ struct ReactionLabView: View {
 
     var body: some View {
         VStack(spacing: 12) {
+            HStack {
+                Spacer()
+                Button { model.reset() } label: {
+                    Label("Reset", systemImage: "arrow.counterclockwise").font(.caption)
+                }
+                .buttonStyle(.bordered).tint(Theme.accent)
+            }
             HStack(alignment: .top, spacing: 6) {
                 ReactantZoneView(zone: 1).frame(maxWidth: .infinity)
                 Text("+").font(.title3).foregroundStyle(.secondary)
@@ -53,10 +60,6 @@ struct ReactionLabView: View {
             } else {
                 Text("Add a reactant to each side.")
                     .font(.footnote).foregroundStyle(.secondary).padding()
-            }
-
-            Button { model.reset() } label: {
-                Label("Reset", systemImage: "arrow.counterclockwise").font(.caption)
             }
         }
         .onChange(of: fireKey) { _, _ in if bothSet { fire() } }
