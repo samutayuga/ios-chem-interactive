@@ -8,6 +8,7 @@ struct ReactionLabView: View {
     @State private var showFailure = false
     @State private var failureTitle = ""
     @State private var failureMessage = ""
+    @State private var showDetail = false
 
     private var fireKey: String {
         "\(model.quantity1?.unit.rawValue ?? "-")|\(model.quantity2?.unit.rawValue ?? "-")"
@@ -39,6 +40,11 @@ struct ReactionLabView: View {
                     ReactionLedgerView(outcome: outcome)
                         .scaleEffect(pulse ? 1.05 : 1)
                         .overlay { if pulse { ReactionBurst() } }
+                    Button { showDetail = true } label: {
+                        Label("Full explanation", systemImage: "text.magnifyingglass")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .buttonStyle(.bordered).tint(Theme.accent)
                 } else {
                     // Failing reaction — surfaced as a modal (below), not inline.
                     Text("No reaction — adjust the reactants.")
@@ -67,6 +73,11 @@ struct ReactionLabView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(failureMessage)
+        }
+        .sheet(isPresented: $showDetail) {
+            if case .success(let r)? = model.result, r.feasible {
+                ReactionDetailSheet(result: r)
+            }
         }
     }
 

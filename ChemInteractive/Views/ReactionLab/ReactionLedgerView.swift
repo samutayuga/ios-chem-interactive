@@ -38,7 +38,7 @@ struct ReactionLedgerView: View {
                 .font(.caption2).foregroundStyle(Theme.text.opacity(0.75))
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            RedoxSectionView(analysis: analyzeRedox(r))
+            compactRedox(analyzeRedox(r))
         }
         .padding(16)
         .background(
@@ -68,6 +68,23 @@ struct ReactionLedgerView: View {
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.cation.opacity(0.3), lineWidth: 0.5))
             }
         }
+    }
+
+    /// One-line redox summary for the compact inline card; full detail lives in the sheet.
+    private func compactRedox(_ a: RedoxAnalysis) -> some View {
+        let redColor = Color(hex: 0xff9040)
+        return HStack(spacing: 8) {
+            Text(a.isRedox ? "REDOX" : "NON-REDOX")
+                .font(.caption2.weight(.bold)).tracking(1)
+                .padding(.horizontal, 8).padding(.vertical, 3)
+                .background(Capsule().fill((a.isRedox ? redColor : Theme.muted).opacity(0.3)))
+                .foregroundStyle(a.isRedox ? redColor : Theme.text.opacity(0.75))
+            if let agents = ReactionLedgerFormat.redoxAgents(a) {
+                Text(agents).font(.caption2).foregroundStyle(Theme.text.opacity(0.75)).lineLimit(1)
+            }
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func num(_ v: Double) -> String { String(format: "%.2f", v) }
