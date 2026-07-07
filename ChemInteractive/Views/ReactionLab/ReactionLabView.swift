@@ -13,9 +13,11 @@ struct ReactionLabView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            ReactantZoneView(zone: 1)
-            Text("+").font(.title3).foregroundStyle(.secondary)
-            ReactantZoneView(zone: 2)
+            HStack(alignment: .top, spacing: 6) {
+                ReactantZoneView(zone: 1).frame(maxWidth: .infinity)
+                Text("+").font(.title3).foregroundStyle(.secondary)
+                ReactantZoneView(zone: 2).frame(maxWidth: .infinity)
+            }
             Text("↓").font(.title2).foregroundStyle(Theme.accent.opacity(0.7))
 
             if let outcome = ReactionLedgerFormat.outcome(model.result) {
