@@ -17,15 +17,18 @@ struct ReactantZoneView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Reactant \(zone)").font(.caption2).foregroundStyle(.secondary)
+            Image(systemName: "\(zone).circle.fill")
+                .font(.subheadline).foregroundStyle(Theme.accent.opacity(0.85))
 
             HStack(spacing: 8) {
                 ForEach(Array(tokens.enumerated()), id: \.offset) { idx, z in
                     tokenPill(z, index: idx)
                 }
                 if tokens.count < 2 {
-                    Text(tokens.isEmpty ? "drop element / ion" : "＋ add 2nd")
-                        .font(.footnote).foregroundStyle(.secondary)
+                    Image(systemName: tokens.isEmpty ? "sparkles" : "plus.circle")
+                        .font(.title3)
+                        .foregroundStyle(Theme.accent.opacity(inviteTap ? 0.9 : 0.5))
+                        .symbolEffect(.pulse, isActive: inviteTap)
                 }
             }
 
@@ -76,9 +79,14 @@ struct ReactantZoneView: View {
 
     private var quantityButton: some View {
         Button { showQuantity = true } label: {
-            Text(quantity.map { "\(String(format: "%.2f", $0.value)) \($0.unit == .mole ? "mol" : "g") ▾" } ?? "set amount ▾")
-                .font(.caption).padding(.horizontal, 8).padding(.vertical, 3)
-                .background(Capsule().fill(.black.opacity(0.4))).foregroundStyle(.white)
+            HStack(spacing: 4) {
+                Image(systemName: "scalemass")
+                if let q = quantity {
+                    Text("\(String(format: "%.2f", q.value)) \(q.unit == .mole ? "mol" : "g")")
+                }
+            }
+            .font(.caption).padding(.horizontal, 8).padding(.vertical, 3)
+            .background(Capsule().fill(.black.opacity(0.4))).foregroundStyle(.white)
         }
         .popover(isPresented: $showQuantity) {
             ReactantQuantityPopover(
