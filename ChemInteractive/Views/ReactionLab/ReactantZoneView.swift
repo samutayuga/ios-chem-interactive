@@ -5,6 +5,7 @@ import ChemCore
 struct ReactantZoneView: View {
     let zone: Int
     @Environment(ReactionLabModel.self) private var model
+    @Environment(CanvasModel.self) private var tray
     @State private var isTargeted = false
     @State private var showQuantity = false
 
@@ -12,6 +13,7 @@ struct ReactantZoneView: View {
     private var reactant: Reactant? { zone == 1 ? model.reactant1 : model.reactant2 }
     private var quantity: ReactantEntry? { zone == 1 ? model.quantity1 : model.quantity2 }
     private var pendingIndex: Int? { model.pendingCharge?.zone == zone ? model.pendingCharge?.index : nil }
+    private var inviteTap: Bool { tray.selectedToken != nil }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -39,7 +41,7 @@ struct ReactantZoneView: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.accent.opacity(isTargeted ? 0.16 : 0.06)))
+        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.accent.opacity(isTargeted || inviteTap ? 0.16 : 0.06)))
         .overlay(RoundedRectangle(cornerRadius: 14)
             .stroke(Theme.accent.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [5])))
         .dropDestination(for: TokenTransfer.self) { items, _ in
@@ -47,6 +49,12 @@ struct ReactantZoneView: View {
             model.place(t, inZone: zone)
             return true
         } isTargeted: { isTargeted = $0 }
+        .onTapGesture {
+            if let token = tray.selectedToken {
+                model.place(token, inZone: zone)
+                tray.clearSelection()
+            }
+        }
     }
 
     private func tokenPill(_ z: ZoneState, index: Int) -> some View {

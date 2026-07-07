@@ -30,7 +30,9 @@ struct RootModeView: View {
                         case .bonding:
                             BondingCanvas().environment(bondingModel)
                         case .reactionLab:
-                            ReactionLabView().environment(reactionModel)
+                            ReactionLabView()
+                                .environment(reactionModel)
+                                .environment(bondingModel)
                         }
                     }
                     .padding(12)
