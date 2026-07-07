@@ -17,6 +17,15 @@ struct ElementTokenView: View {
     private var isSelected: Bool { model.selectedToken == token }
     private var glyphColor: Color { elementClassColor(element.elementClass) }
 
+    private var dragPreview: some View {
+        Text(element.symbol)
+            .font(.system(size: 20, weight: .bold))
+            .foregroundStyle(glyphColor)
+            .padding(10)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(glyphColor.opacity(0.6), lineWidth: 1))
+    }
+
     @ViewBuilder
     var body: some View {
         let styled = VStack(spacing: 0) {
@@ -54,6 +63,7 @@ struct ElementTokenView: View {
             styled
                 .opacity(model.selectedToken != nil && !isSelected ? 0.5 : 1)
                 .onTapGesture { onTap(element) }
+                .draggable(token) { dragPreview }
         }
     }
 }
