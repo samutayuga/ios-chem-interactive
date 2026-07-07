@@ -20,6 +20,7 @@ struct ReactionLedgerView: View {
                         .background(RoundedRectangle(cornerRadius: 8).stroke(Theme.accent.opacity(0.5)))
                 }
                 Text(ReactionLedgerFormat.footer(r)).font(.caption2).foregroundStyle(.secondary)
+                RedoxSectionView(analysis: analyzeRedox(r))
             }
         case .noReaction(let msg):
             NoReactionView(badge: "No reaction", message: msg, tone: .warn)
