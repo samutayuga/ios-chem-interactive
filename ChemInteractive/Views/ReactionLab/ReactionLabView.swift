@@ -9,6 +9,8 @@ struct ReactionLabView: View {
     @State private var failureTitle = ""
     @State private var failureMessage = ""
     @State private var showDetail = false
+    @State private var showTour = false
+    @AppStorage("reactionLabTourSeen") private var tourSeen = false
 
     private var fireKey: String {
         "\(model.quantity1?.unit.rawValue ?? "-")|\(model.quantity2?.unit.rawValue ?? "-")"
@@ -29,6 +31,10 @@ struct ReactionLabView: View {
     var body: some View {
         VStack(spacing: 12) {
             HStack {
+                Button { showTour = true } label: {
+                    Image(systemName: "questionmark.circle").font(.title3)
+                }
+                .tint(Theme.accent)
                 Spacer()
                 Button { model.reset() } label: {
                     Label("Reset", systemImage: "arrow.counterclockwise").font(.caption)
@@ -82,6 +88,8 @@ struct ReactionLabView: View {
                 ReactionDetailSheet(result: r)
             }
         }
+        .sheet(isPresented: $showTour) { ReactionLabTourSheet() }
+        .onAppear { if !tourSeen { showTour = true; tourSeen = true } }
     }
 
     private func fire() {
