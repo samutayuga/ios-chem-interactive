@@ -54,7 +54,9 @@ struct ReactionLedgerView: View {
     /// Compact product yield chips that wrap into rows — space-efficient when a
     /// reaction has two or three products.
     private func productChips(_ r: ReactionResult) -> some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 6)], spacing: 6) {
+        let cols = Array(repeating: GridItem(.flexible(), spacing: 6),
+                         count: min(max(r.products.count, 1), 3))
+        return LazyVGrid(columns: cols, spacing: 6) {
             ForEach(Array(zip(r.products, r.yields).enumerated()), id: \.offset) { _, pair in
                 let (p, y) = pair
                 VStack(spacing: 1) {
