@@ -95,7 +95,13 @@ struct ReactionLabView: View {
                 }
             }
         }
-        .onAppear { if !tourSeen { activeSheet = .tour; tourSeen = true } }
+        .onAppear {
+            guard !tourSeen else { return }
+            tourSeen = true
+            // Present after the view settles — setting sheet state during onAppear
+            // itself often fails to present.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { activeSheet = .tour }
+        }
     }
 
     private func fire() {
