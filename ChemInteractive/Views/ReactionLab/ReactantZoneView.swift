@@ -44,17 +44,18 @@ struct ReactantZoneView: View {
         .background(RoundedRectangle(cornerRadius: 14).fill(Theme.accent.opacity(isTargeted || inviteTap ? 0.16 : 0.06)))
         .overlay(RoundedRectangle(cornerRadius: 14)
             .stroke(Theme.accent.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [5])))
-        .dropDestination(for: TokenTransfer.self) { items, _ in
-            guard let t = items.first else { return false }
-            model.place(t, inZone: zone)
-            return true
-        } isTargeted: { isTargeted = $0 }
+        .contentShape(RoundedRectangle(cornerRadius: 14))
         .onTapGesture {
             if let token = tray.selectedToken {
                 model.place(token, inZone: zone)
                 tray.clearSelection()
             }
         }
+        .dropDestination(for: TokenTransfer.self) { items, _ in
+            guard let t = items.first else { return false }
+            model.place(t, inZone: zone)
+            return true
+        } isTargeted: { isTargeted = $0 }
     }
 
     private func tokenPill(_ z: ZoneState, index: Int) -> some View {
