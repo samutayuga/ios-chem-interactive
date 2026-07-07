@@ -38,4 +38,10 @@ final class ReactionClassTests: XCTestCase {
         let cl = makeReactant([el("Cl", mass: 35.45, .nonMetal, charge: -1)])
         XCTAssertEqual(classifyReaction(na, cl), .synthesis)
     }
+    func test_metal_plus_o2_is_synthesis_not_combustion() {
+        // A bare metal + O₂ is direct combination (oxidation), not combustion.
+        let fe = makeReactant([el("Fe", mass: 55.85, .metal, charge: 2)])
+        let o2 = makeReactant([el("O", mass: 16, .nonMetal, charge: -2)])
+        XCTAssertEqual(classifyReaction(fe, o2), .synthesis)
+    }
 }

@@ -7,8 +7,10 @@ public enum ReactionClass: String, Equatable, Sendable {
 func isDioxygen(_ r: Reactant) -> Bool {
     r.composition.count == 1 && r.composition["O"] == 2
 }
+/// A fuel for combustion must contain carbon or hydrogen. A bare metal/element + O₂
+/// is direct combination (synthesis / oxidation), not combustion — e.g. Fe + O₂ → FeO.
 private func isFuel(_ r: Reactant) -> Bool {
-    r.composition["C"] != nil || r.composition["H"] != nil || r.isBareElement
+    r.composition["C"] != nil || r.composition["H"] != nil
 }
 private func isIonicCompound(_ r: Reactant) -> Bool {
     r.cation != nil && r.anion != nil
