@@ -64,4 +64,21 @@ final class ReactionLedgerFormatTests: XCTestCase {
         let res = solved([("C", false), ("O", false)], [("C", false), ("H", false)])!
         guard case .notClassified? = ReactionLedgerFormat.outcome(res) else { return XCTFail() }
     }
+
+    func test_redox_badge_and_agents_for_displacement() {
+        // Zn + CuSO₄ → ZnSO₄ + Cu (both metals are transition → charge picks 2,2)
+        let res = solved([("Zn", false)], [("Cu", false), ("SO₄", true)], picks: [2, 2])!
+        guard case .success(let r) = res else { return XCTFail() }
+        let a = analyzeRedox(r)
+        XCTAssertEqual(ReactionLedgerFormat.redoxBadge(a), "Redox")
+        XCTAssertEqual(ReactionLedgerFormat.redoxAgents(a), "Oxidising: CuSO₄ · Reducing: Zn")
+    }
+
+    func test_redox_badge_and_agents_for_neutralisation() {
+        let res = solved([("Na", false), ("OH", true)], [("H", false), ("Cl", false)])!
+        guard case .success(let r) = res else { return XCTFail() }
+        let a = analyzeRedox(r)
+        XCTAssertEqual(ReactionLedgerFormat.redoxBadge(a), "Non-redox")
+        XCTAssertNil(ReactionLedgerFormat.redoxAgents(a))
+    }
 }

@@ -65,4 +65,13 @@ enum ReactionLedgerFormat {
     }
 
     private static func num(_ v: Double) -> String { String(format: "%.2f", v) }
+
+    static func redoxBadge(_ a: RedoxAnalysis) -> String {
+        a.isRedox ? "Redox" : "Non-redox"
+    }
+
+    static func redoxAgents(_ a: RedoxAnalysis) -> String? {
+        guard a.isRedox, let ox = a.oxidisingAgent, let red = a.reducingAgent else { return nil }
+        return "Oxidising: \(ox) · Reducing: \(red)"
+    }
 }
