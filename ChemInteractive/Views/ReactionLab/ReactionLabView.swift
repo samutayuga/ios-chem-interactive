@@ -5,11 +5,25 @@ import ChemCore
 struct ReactionLabView: View {
     @Environment(ReactionLabModel.self) private var model
     @State private var pulse = false
+    @State private var showFailure = false
+    @State private var failureTitle = ""
+    @State private var failureMessage = ""
 
     private var fireKey: String {
         "\(model.quantity1?.unit.rawValue ?? "-")|\(model.quantity2?.unit.rawValue ?? "-")"
     }
     private var bothSet: Bool { model.quantity1 != nil && model.quantity2 != nil }
+
+    /// A failing outcome (title + message) when both reactants resolve but don't react;
+    /// nil for a successful reaction or an incomplete build.
+    private var failure: (title: String, message: String)? {
+        switch ReactionLedgerFormat.outcome(model.result) {
+        case .noReaction(let m):    return ("No reaction", m)
+        case .notClassified(let m): return ("Not classified", m)
+        case .cannotBalance(let m): return ("Can’t balance", m)
+        default:                    return nil
+        }
+    }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -21,9 +35,15 @@ struct ReactionLabView: View {
             Text("↓").font(.title2).foregroundStyle(Theme.accent.opacity(0.7))
 
             if let outcome = ReactionLedgerFormat.outcome(model.result) {
-                ReactionLedgerView(outcome: outcome)
-                    .scaleEffect(pulse ? 1.05 : 1)
-                    .overlay { if pulse { ReactionBurst() } }
+                if case .reaction = outcome {
+                    ReactionLedgerView(outcome: outcome)
+                        .scaleEffect(pulse ? 1.05 : 1)
+                        .overlay { if pulse { ReactionBurst() } }
+                } else {
+                    // Failing reaction — surfaced as a modal (below), not inline.
+                    Text("No reaction — adjust the reactants.")
+                        .font(.footnote).foregroundStyle(.secondary).padding()
+                }
             } else {
                 Text("Add a reactant to each side.")
                     .font(.footnote).foregroundStyle(.secondary).padding()
@@ -34,6 +54,20 @@ struct ReactionLabView: View {
             }
         }
         .onChange(of: fireKey) { _, _ in if bothSet { fire() } }
+        .onChange(of: failure?.message) { _, _ in
+            if let f = failure {
+                failureTitle = f.title
+                failureMessage = f.message
+                showFailure = true
+            } else {
+                showFailure = false
+            }
+        }
+        .alert(failureTitle, isPresented: $showFailure) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(failureMessage)
+        }
     }
 
     private func fire() {
