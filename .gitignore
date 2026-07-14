@@ -15,3 +15,6 @@ xcuserdata/
 
 # Claude Code local tooling
 .claude/
+
+# superpowers scratch (brainstorm mockups, sdd ledger)
+.superpowers/

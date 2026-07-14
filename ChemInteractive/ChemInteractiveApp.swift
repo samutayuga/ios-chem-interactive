@@ -6,8 +6,7 @@ struct ChemInteractiveApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ChemCanvasView()
-                .environment(model)
+            RootModeView(bondingModel: model)
                 .preferredColorScheme(.dark)
                 .task {
                     #if DEBUG
